@@ -22,7 +22,7 @@ struct RootView: View {
     /// User-resizable Now Playing panel width (via the grab strip on its
     /// leading edge), persisted across launches.
     @AppStorage("nowPlayingPanelWidth") private var panelWidth = 344.0
-    private static let panelWidthRange = 300.0...480.0
+    private static let panelWidthRange = 300.0...560.0
     @Environment(\.openSettings) private var openSettings
 
     private var selection: SidebarSelection? { SidebarSelection(rawValue: selectionRaw) }

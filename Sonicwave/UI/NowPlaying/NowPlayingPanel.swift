@@ -8,26 +8,39 @@ import QuickLook
 /// play-from-here. See docs/04-ui-ux.md.
 struct NowPlayingPanel: View {
     @Environment(PlayerModel.self) private var player
+    /// Queue-first mode: the hero card collapses to a compact strip so Up
+    /// Next gets nearly the panel's full height. Persisted like the panel
+    /// width; scrubber and transport stay reachable in the toolbar LCD.
+    @AppStorage("nowPlayingHeroCollapsed") private var heroCollapsed = false
 
     // No empty state: the panel is only presented when something is playing
     // or queued (RootView gates the inspector on that).
     var body: some View {
         VStack(spacing: 0) {
             if let current = player.currentTrack {
-                // Priority so the full-bleed square hero keeps its
-                // width-sized height; the queue list takes what's left
-                // instead of compressing the artwork.
-                CurrentTrackCard(song: current)
-                    .layoutPriority(1)
+                if heroCollapsed {
+                    CompactTrackStrip(song: current) { setHeroCollapsed(false) }
+                } else {
+                    // Priority so the full-bleed square hero keeps its
+                    // width-sized height; the queue list takes what's left
+                    // instead of compressing the artwork.
+                    CurrentTrackCard(song: current) { setHeroCollapsed(true) }
+                        .layoutPriority(1)
+                }
                 Divider()
             }
             queue
         }
-        // With a hero, extend to the window's very top: the inspector has
-        // no toolbar items, so its slice of the toolbar is dead space —
-        // the artwork fills it, showing through the toolbar material.
-        .ignoresSafeArea(player.currentTrack != nil ? .container : SafeAreaRegions(),
+        // With a full hero, extend to the window's very top: the inspector
+        // has no toolbar items, so its slice of the toolbar is dead space —
+        // the artwork fills it, showing through the toolbar material. The
+        // compact strip stays below the toolbar like the queue-only state.
+        .ignoresSafeArea(player.currentTrack != nil && !heroCollapsed ? .container : SafeAreaRegions(),
                          edges: .top)
+    }
+
+    private func setHeroCollapsed(_ collapsed: Bool) {
+        withAnimation(.easeInOut(duration: 0.2)) { heroCollapsed = collapsed }
     }
 
     private var queue: some View {
@@ -138,10 +151,16 @@ struct NowPlayingPanel: View {
 /// centerpiece.
 private struct CurrentTrackCard: View {
     let song: Song
+    var onCollapse: () -> Void
     @Environment(AppModel.self) private var app
     /// Full-resolution artwork staged for Quick Look (set on hero click).
     @State private var artworkPreviewURL: URL?
     @State private var albumHovering = false
+    /// Quick Look stays disarmed briefly after the card appears: expanding
+    /// from the compact strip swaps this card in under the mouse, and the
+    /// click that triggered the expansion is occasionally re-delivered to
+    /// the artwork's tap gesture, popping Quick Look uninvited.
+    @State private var quickLookArmed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -151,6 +170,7 @@ private struct CurrentTrackCard: View {
             HeroArtwork(coverArt: song.coverArt)
                 .contentShape(Rectangle())
                 .onTapGesture {
+                    guard quickLookArmed else { return }
                     Task {
                         artworkPreviewURL = await ArtworkCache.shared.originalImageFileURL(
                             coverArt: song.coverArt,
@@ -161,10 +181,22 @@ private struct CurrentTrackCard: View {
                 .help("Show full-size artwork")
 
             VStack(alignment: .leading, spacing: 0) {
-                // Title / artist / album.
-                Text(song.title)
-                    .font(.title2.weight(.bold))
-                    .lineLimit(1)
+                // Title / artist / album. The chevron beside the title
+                // collapses the card to the compact strip (queue-first mode).
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(song.title)
+                        .font(.title2.weight(.bold))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Button(action: onCollapse) {
+                        Image(systemName: "chevron.up")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Collapse to make room for Up Next")
+                    .accessibilityLabel("Collapse Now Playing")
+                }
                 Text(song.artist ?? "—")
                     .font(.body)
                     .foregroundStyle(.secondary)
@@ -210,6 +242,10 @@ private struct CurrentTrackCard: View {
             .padding(.top, 14)
             .padding(.bottom, 14)
         }
+        .task {
+            try? await Task.sleep(for: .milliseconds(400))
+            quickLookArmed = true
+        }
     }
 }
 
@@ -223,6 +259,43 @@ private struct HeroArtwork: View {
             ArtworkView(coverArt: coverArt, size: geo.size.width, cornerRadius: 0)
         }
         .aspectRatio(1, contentMode: .fit)
+    }
+}
+
+/// Collapsed stand-in for the hero card: small artwork plus title/artist on
+/// a single strip, giving Up Next nearly the panel's full height. Clicking
+/// anywhere on the strip (it lives outside the queue List, so a tap gesture
+/// is safe here) restores the full card.
+private struct CompactTrackStrip: View {
+    let song: Song
+    var onExpand: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ArtworkView(coverArt: song.coverArt, size: 36, cornerRadius: 6)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(song.title)
+                    .font(.body.weight(.medium)).lineLimit(1)
+                Text(song.artist ?? "—")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.down")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(hovering ? .secondary : .tertiary)
+        }
+        // 16pt insets to match the queue header and the hero card's meta.
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onExpand)
+        .onHover { hovering = $0 }
+        .help("Expand Now Playing")
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Expand Now Playing")
     }
 }
 

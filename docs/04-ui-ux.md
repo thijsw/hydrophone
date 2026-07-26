@@ -123,7 +123,7 @@ selectable lists; selections are part of restorable view state. Toggleable
   required the header to reflow looked janky. Motion-analysis verified: the
   pane slides over ~10 frames while the sidebar and toolbar show zero moved
   frames. User-resizable via a grab strip on its leading edge
-  (`PanelResizeHandle`, 300–480pt, persisted) — the resize lives entirely
+  (`PanelResizeHandle`, 300–560pt, persisted) — the resize lives entirely
   inside the detail column, so it can't re-trigger the split-view/toolbar
   instability. Remaining trade-off: the hero artwork tops out at the
   toolbar's bottom edge rather than the window top.
@@ -139,6 +139,21 @@ selectable lists; selections are part of restorable view state. Toggleable
   rows. Clicking the hero artwork **Quick Looks** the full-resolution cover
   (staged via `ArtworkCache.originalImageFileURL`, see `05`); the album line
   doubles as a **Show Album in Library** button (⇧⌘L, also in Controls).
+- **Queue-first mode (collapsible hero)**: the chevron beside the title
+  collapses the hero card to a compact strip — 36pt artwork, title/artist,
+  chevron — so Up Next gets nearly the panel's full height (~85% vs ~40%);
+  clicking anywhere on the strip restores the full card. The strip lives
+  outside the queue `List`, so its tap gesture is safe (the no-tap-gesture
+  rule below applies to queue *rows*). Persisted as
+  `nowPlayingHeroCollapsed` (`@AppStorage`), like the panel width. While
+  collapsed the panel does NOT ignore the top safe area (the strip sits
+  below the toolbar, matching the queue-only state); scrubber and transport
+  remain reachable in the toolbar LCD.
+  Gotcha: expanding swaps the hero in under the mouse, and the click that
+  triggered the expansion is *occasionally* re-delivered to the artwork's
+  tap gesture, popping Quick Look uninvited (reproduced ~1 in 5 by hand).
+  The artwork's Quick Look tap therefore stays disarmed for the first
+  400ms after the card appears (`quickLookArmed`).
 - Below, the **Up Next** queue: **reorderable** by drag (`.onMove`),
   hover-to-remove, "play from here" via a hover play button on the artwork
   (and the context menu), clear upcoming. Edits mutate `PlayerModel.queue`;

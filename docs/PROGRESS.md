@@ -50,6 +50,23 @@ xcodebuild -project Sonicwave.xcodeproj -scheme Sonicwave \
 
 ---
 
+## Queue-first Now Playing panel: collapsible hero (2026-07-26)
+The play queue can now take (nearly) the whole panel. A chevron beside the
+hero title collapses the card to a compact strip (36pt art, title/artist);
+clicking the strip restores it. Persisted as `nowPlayingHeroCollapsed`,
+like the panel width. Max panel width bumped 480 → 560pt.
+- The strip sits below the toolbar (no top safe-area ignore while
+  collapsed); scrubber/transport stay reachable in the toolbar LCD.
+- Hard-won: expanding swaps the hero in under the mouse and the expansion
+  click is occasionally re-delivered to the artwork's tap gesture, opening
+  Quick Look uninvited (~1 in 5). Fixed by disarming the Quick Look tap
+  for 400ms after the card appears (`quickLookArmed`); a deliberate click
+  afterwards still works. See `04`.
+- Live-verified against the demo library: repeated collapse/expand cycles
+  (no spurious Quick Look post-fix), queue drag-reorder in collapsed mode,
+  deliberate artwork Quick Look, state persistence across relaunch.
+  Build + full test suite + SwiftLint clean.
+
 ## v0.5.1 released (2026-07-18)
 Build 9, notarized/stapled/Gatekeeper-accepted, hand-written notes.
 Polish/reliability release: Back-navigation state restoration (artist
