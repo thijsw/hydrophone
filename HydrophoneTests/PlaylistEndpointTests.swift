@@ -49,9 +49,10 @@ struct PlaylistEndpointTests {
     }
 
     @Test func starAndUnstar() {
-        #expect(Endpoint.star(id: "s1").queryItems == [URLQueryItem(name: "id", value: "s1")])
-        #expect(Endpoint.star(id: "a1", isAlbum: true).queryItems == [URLQueryItem(name: "albumId", value: "a1")])
-        #expect(Endpoint.unstar(id: "s1").method == "unstar")
+        #expect(Endpoint.favorite(id: "s1", starred: true).queryItems == [URLQueryItem(name: "id", value: "s1")])
+        #expect(Endpoint.favorite(id: "a1", kind: .album, starred: true).queryItems
+                == [URLQueryItem(name: "albumId", value: "a1")])
+        #expect(Endpoint.favorite(id: "s1", starred: false).method == "unstar")
     }
 }
 

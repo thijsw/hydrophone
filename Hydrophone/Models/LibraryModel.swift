@@ -269,7 +269,7 @@ final class LibraryModel {
         var allSucceeded = true
         for id in songIds {
             do {
-                _ = try await client.sendStatus(starred ? .star(id: id) : .unstar(id: id))
+                _ = try await client.sendStatus(.favorite(id: id, starred: starred))
             } catch {
                 allSucceeded = false
             }
@@ -279,8 +279,7 @@ final class LibraryModel {
     }
 
     func setAlbumStarred(_ starred: Bool, albumId: String) async {
-        _ = try? await client.sendStatus(
-            starred ? .star(id: albumId, isAlbum: true) : .unstar(id: albumId, isAlbum: true))
+        _ = try? await client.sendStatus(.favorite(id: albumId, kind: .album, starred: starred))
         await reloadStarred()
     }
 

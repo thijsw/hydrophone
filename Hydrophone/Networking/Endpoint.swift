@@ -1,5 +1,39 @@
 import Foundation
 
+/// Assembles an endpoint's query-item list declaratively: each expression is
+/// either a single `query(_:_:)` item (nil values drop out) or a repeated-key
+/// `queries(_:_:)` group. Order is preserved — it is part of the wire format
+/// (`SubsonicClient.formBody` serializes in order; see EndpointGoldenTests).
+@resultBuilder
+enum QueryList {
+    static func buildBlock(_ parts: [URLQueryItem]...) -> [URLQueryItem] { parts.flatMap(\.self) }
+    static func buildExpression(_ item: URLQueryItem?) -> [URLQueryItem] { item.map { [$0] } ?? [] }
+    static func buildExpression(_ items: [URLQueryItem]) -> [URLQueryItem] { items }
+    static func buildOptional(_ items: [URLQueryItem]?) -> [URLQueryItem] { items ?? [] }
+}
+
+/// One query item; a nil value means "omit the parameter".
+private func query(_ name: String, _ value: String?) -> URLQueryItem? {
+    value.map { URLQueryItem(name: name, value: $0) }
+}
+
+private func query(_ name: String, _ value: Int?) -> URLQueryItem? {
+    value.map { URLQueryItem(name: name, value: String($0)) }
+}
+
+private func query(_ name: String, _ value: Bool?) -> URLQueryItem? {
+    value.map { URLQueryItem(name: name, value: $0 ? "true" : "false") }
+}
+
+/// A repeated-key group (`id=a&id=b`), as Subsonic spells list parameters.
+private func queries(_ name: String, _ values: [String]) -> [URLQueryItem] {
+    values.map { URLQueryItem(name: name, value: $0) }
+}
+
+private func queries(_ name: String, _ values: [Int]) -> [URLQueryItem] {
+    values.map { URLQueryItem(name: name, value: String($0)) }
+}
+
 /// Describes a single Subsonic REST call: the method name and its
 /// endpoint-specific query items (auth + common params are added by the
 /// client). See docs/02-opensubsonic-api.md.
@@ -18,6 +52,11 @@ struct Endpoint: Sendable {
         self.usesFormPost = usesFormPost
     }
 
+    init(_ method: String, usesFormPost: Bool = false,
+         @QueryList _ items: () -> [URLQueryItem]) {
+        self.init(method, items(), usesFormPost: usesFormPost)
+    }
+
     // MARK: Connection
     static let ping = Endpoint("ping")
 
@@ -34,15 +73,14 @@ struct Endpoint: Sendable {
     static func albumList2(type: String, size: Int, offset: Int,
                            genre: String? = nil,
                            fromYear: Int? = nil, toYear: Int? = nil) -> Endpoint {
-        var items: [URLQueryItem] = [
-            .init(name: "type", value: type),
-            .init(name: "size", value: String(size)),
-            .init(name: "offset", value: String(offset))
-        ]
-        if let genre { items.append(.init(name: "genre", value: genre)) }
-        if let fromYear { items.append(.init(name: "fromYear", value: String(fromYear))) }
-        if let toYear { items.append(.init(name: "toYear", value: String(toYear))) }
-        return Endpoint("getAlbumList2", items)
+        Endpoint("getAlbumList2") {
+            query("type", type)
+            query("size", size)
+            query("offset", offset)
+            query("genre", genre)
+            query("fromYear", fromYear)
+            query("toYear", toYear)
+        }
     }
 
     static let artists = Endpoint("getArtists")
@@ -50,7 +88,7 @@ struct Endpoint: Sendable {
     /// Subsonic has no "all songs" endpoint; the Songs view uses a random
     /// sample for now (see docs/05-data-and-caching.md, known limitation).
     static func randomSongs(size: Int) -> Endpoint {
-        Endpoint("getRandomSongs", [.init(name: "size", value: String(size))])
+        Endpoint("getRandomSongs") { query("size", size) }
     }
 
     static func artist(id: String) -> Endpoint {
@@ -64,11 +102,11 @@ struct Endpoint: Sendable {
     static let genres = Endpoint("getGenres")
 
     static func songsByGenre(_ genre: String, count: Int, offset: Int) -> Endpoint {
-        Endpoint("getSongsByGenre", [
-            .init(name: "genre", value: genre),
-            .init(name: "count", value: String(count)),
-            .init(name: "offset", value: String(offset))
-        ])
+        Endpoint("getSongsByGenre") {
+            query("genre", genre)
+            query("count", count)
+            query("offset", offset)
+        }
     }
 
     // MARK: Discovery
@@ -76,27 +114,27 @@ struct Endpoint: Sendable {
     /// metadata agent, e.g. Navidrome's Last.fm bridge). Only artists present
     /// in the library are returned (`includeNotPresent` defaults to false).
     static func artistInfo2(id: String, count: Int) -> Endpoint {
-        Endpoint("getArtistInfo2", [
-            .init(name: "id", value: id),
-            .init(name: "count", value: String(count))
-        ])
+        Endpoint("getArtistInfo2") {
+            query("id", id)
+            query("count", count)
+        }
     }
 
     /// Similar-song mix for Start Radio. `id` may be a song, album, or
     /// artist id — the server mixes accordingly.
     static func similarSongs2(id: String, count: Int) -> Endpoint {
-        Endpoint("getSimilarSongs2", [
-            .init(name: "id", value: id),
-            .init(name: "count", value: String(count))
-        ])
+        Endpoint("getSimilarSongs2") {
+            query("id", id)
+            query("count", count)
+        }
     }
 
     /// Top songs key off the artist *name*, not id (Subsonic API quirk).
     static func topSongs(artist: String, count: Int) -> Endpoint {
-        Endpoint("getTopSongs", [
-            .init(name: "artist", value: artist),
-            .init(name: "count", value: String(count))
-        ])
+        Endpoint("getTopSongs") {
+            query("artist", artist)
+            query("count", count)
+        }
     }
 
     // MARK: Play queue
@@ -104,12 +142,13 @@ struct Endpoint: Sendable {
     /// the playhead (ms). Survives relaunch and enables cross-device resume.
     /// The id list grows with the queue → formPost when available.
     static func savePlayQueue(ids: [String], current: String?, positionMs: Int) -> Endpoint {
-        var items: [URLQueryItem] = ids.map { .init(name: "id", value: $0) }
-        if let current {
-            items.append(.init(name: "current", value: current))
-            items.append(.init(name: "position", value: String(positionMs)))
+        Endpoint("savePlayQueue", usesFormPost: true) {
+            queries("id", ids)
+            if let current {
+                query("current", current)
+                query("position", positionMs)
+            }
         }
-        return Endpoint("savePlayQueue", items, usesFormPost: true)
     }
 
     static let playQueue = Endpoint("getPlayQueue")
@@ -118,35 +157,36 @@ struct Endpoint: Sendable {
     /// `submission: false` reports "now playing"; `true` records the play
     /// (Navidrome play counts / external scrobblers).
     static func scrobble(id: String, submission: Bool) -> Endpoint {
-        Endpoint("scrobble", [
-            .init(name: "id", value: id),
-            .init(name: "submission", value: submission ? "true" : "false")
-        ])
+        Endpoint("scrobble") {
+            query("id", id)
+            query("submission", submission)
+        }
     }
 
     // MARK: Favorites
     static let starred2 = Endpoint("getStarred2")
 
-    static func star(id: String, isAlbum: Bool = false, isArtist: Bool = false) -> Endpoint {
-        let key = isArtist ? "artistId" : (isAlbum ? "albumId" : "id")
-        return Endpoint("star", [.init(name: key, value: id)])
+    /// What a star applies to; the raw value is the API's parameter key.
+    enum FavoriteKind: String, Sendable {
+        case song = "id"
+        case album = "albumId"
+        case artist = "artistId"
     }
 
-    static func unstar(id: String, isAlbum: Bool = false, isArtist: Bool = false) -> Endpoint {
-        let key = isArtist ? "artistId" : (isAlbum ? "albumId" : "id")
-        return Endpoint("unstar", [.init(name: key, value: id)])
+    static func favorite(id: String, kind: FavoriteKind = .song, starred: Bool) -> Endpoint {
+        Endpoint(starred ? "star" : "unstar") { query(kind.rawValue, id) }
     }
 
     // MARK: Search
-    static func search3(query: String, songCount: Int, songOffset: Int,
+    static func search3(query text: String, songCount: Int, songOffset: Int,
                         albumCount: Int, artistCount: Int) -> Endpoint {
-        Endpoint("search3", [
-            .init(name: "query", value: query),
-            .init(name: "songCount", value: String(songCount)),
-            .init(name: "songOffset", value: String(songOffset)),
-            .init(name: "albumCount", value: String(albumCount)),
-            .init(name: "artistCount", value: String(artistCount))
-        ])
+        Endpoint("search3") {
+            query("query", text)
+            query("songCount", songCount)
+            query("songOffset", songOffset)
+            query("albumCount", albumCount)
+            query("artistCount", artistCount)
+        }
     }
 
     // MARK: Playlists
@@ -162,11 +202,11 @@ struct Endpoint: Sendable {
     /// `updatePlaylist` can only append (see `updatePlaylist`).
     static func createPlaylist(name: String? = nil, playlistId: String? = nil,
                                songIds: [String] = []) -> Endpoint {
-        var items: [URLQueryItem] = []
-        if let playlistId { items.append(.init(name: "playlistId", value: playlistId)) }
-        if let name { items.append(.init(name: "name", value: name)) }
-        items += songIds.map { URLQueryItem(name: "songId", value: $0) }
-        return Endpoint("createPlaylist", items, usesFormPost: true)
+        Endpoint("createPlaylist", usesFormPost: true) {
+            query("playlistId", playlistId)
+            query("name", name)
+            queries("songId", songIds)
+        }
     }
 
     static func deletePlaylist(id: String) -> Endpoint {
@@ -178,12 +218,13 @@ struct Endpoint: Sendable {
     static func updatePlaylist(id: String, name: String? = nil, comment: String? = nil,
                                isPublic: Bool? = nil, songIdsToAdd: [String] = [],
                                songIndexesToRemove: [Int] = []) -> Endpoint {
-        var items: [URLQueryItem] = [.init(name: "playlistId", value: id)]
-        if let name { items.append(.init(name: "name", value: name)) }
-        if let comment { items.append(.init(name: "comment", value: comment)) }
-        if let isPublic { items.append(.init(name: "public", value: isPublic ? "true" : "false")) }
-        items += songIdsToAdd.map { URLQueryItem(name: "songIdToAdd", value: $0) }
-        items += songIndexesToRemove.map { URLQueryItem(name: "songIndexToRemove", value: String($0)) }
-        return Endpoint("updatePlaylist", items, usesFormPost: true)
+        Endpoint("updatePlaylist", usesFormPost: true) {
+            query("playlistId", id)
+            query("name", name)
+            query("comment", comment)
+            query("public", isPublic)
+            queries("songIdToAdd", songIdsToAdd)
+            queries("songIndexToRemove", songIndexesToRemove)
+        }
     }
 }
