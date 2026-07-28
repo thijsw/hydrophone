@@ -80,7 +80,7 @@ struct ArtistDetailView: View {
     @Environment(LibraryModel.self) private var library
     @Environment(Navigator.self) private var navigator
     @State private var albums: [Album] = []
-    @State private var info: ArtistInfo2Body.Info?
+    @State private var info: ArtistInfo?
     /// Persisted (not @State) as the id of the artist whose bio is expanded:
     /// opening an album tears this view down, and Back must not collapse the
     /// bio. A different artist naturally reads as collapsed.

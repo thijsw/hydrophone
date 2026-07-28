@@ -173,11 +173,11 @@ final class AppModel {
     /// configured, the server has no saved queue, or playback already started.
     private func restorePlayQueue() async {
         guard await client.isConfigured,
-              let body = try? await client.send(.playQueue, as: PlayQueueBody.self),
-              let entries = body.playQueue?.entry, !entries.isEmpty else { return }
-        let index = body.playQueue?.current
+              let saved = try? await client.object(.playQueue, as: PlayQueue.self),
+              let entries = saved.entry, !entries.isEmpty else { return }
+        let index = saved.current
             .flatMap { id in entries.firstIndex { $0.id == id } } ?? 0
-        let position = TimeInterval(body.playQueue?.position ?? 0) / 1000
+        let position = TimeInterval(saved.position ?? 0) / 1000
         player.restoreQueue(entries, currentIndex: index, position: position)
     }
 }

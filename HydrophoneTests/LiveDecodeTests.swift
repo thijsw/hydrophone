@@ -54,8 +54,8 @@ struct LiveDecodeTests {
         let client = client(env)
 
         // Pick a real song.
-        let body = try await client.send(.randomSongs(size: 1), as: RandomSongsBody.self)
-        let song = try #require(body.randomSongs.song?.first)
+        let songs = try await client.list(.randomSongs(size: 1), of: Song.self)
+        let song = try #require(songs.first)
 
         // Download the stream (full, original format).
         let url = try await client.streamURL(songId: song.id)

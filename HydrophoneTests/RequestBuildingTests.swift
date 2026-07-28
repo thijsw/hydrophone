@@ -103,7 +103,7 @@ struct RequestBuildingTests {
             {"name":"songLyrics","versions":[1,2]}
         ]}
         """.utf8)
-        let body = try JSONDecoder().decode(OpenSubsonicExtensionsBody.self, from: json)
-        #expect(body.openSubsonicExtensions?.contains { $0.name == "formPost" } == true)
+        let body = try JSONDecoder().decode(ObjectBody<[OpenSubsonicExtension]>.self, from: json)
+        #expect(body.value.contains { $0.name == "formPost" })
     }
 }

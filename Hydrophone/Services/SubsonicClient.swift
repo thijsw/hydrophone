@@ -37,6 +37,21 @@ actor SubsonicClient {
         return body
     }
 
+    /// Performs a list endpoint (`{ "<method>": { "<listKey>": [Element] } }`)
+    /// and returns the array; servers with no data yield `[]`.
+    func list<Element: SubsonicListElement>(
+        _ endpoint: Endpoint, of _: Element.Type
+    ) async throws(SubsonicError) -> [Element] {
+        try await send(endpoint, as: ListBody<Element>.self).items
+    }
+
+    /// Performs a single-payload endpoint (`{ "<method>": <Payload> }`).
+    func object<Payload: Decodable & Sendable>(
+        _ endpoint: Endpoint, as _: Payload.Type
+    ) async throws(SubsonicError) -> Payload {
+        try await send(endpoint, as: ObjectBody<Payload>.self).value
+    }
+
     /// Performs an endpoint call that returns no payload (ping, star, etc.) and
     /// returns the server identity/capability info.
     @discardableResult
@@ -97,12 +112,14 @@ actor SubsonicClient {
     private func supportsFormPost(using creds: ServerCredentials) async -> Bool {
         if let cached = formPostSupport, cached.baseURL == creds.baseURL { return cached.supported }
         // `.openSubsonicExtensions` itself is a plain GET, so no recursion.
-        // Errors (non-OpenSubsonic server, transient outage) resolve to false
-        // without caching, so one hiccup can't disable POST for the session.
-        guard let body = try? await send(.openSubsonicExtensions, as: OpenSubsonicExtensionsBody.self) else {
+        // Errors (non-OpenSubsonic server, transient outage, missing payload)
+        // resolve to false without caching, so one hiccup can't disable POST
+        // for the session.
+        guard let extensions = try? await object(.openSubsonicExtensions,
+                                                 as: [OpenSubsonicExtension].self) else {
             return false
         }
-        let supported = (body.openSubsonicExtensions ?? []).contains { $0.name == "formPost" }
+        let supported = extensions.contains { $0.name == "formPost" }
         formPostSupport = (creds.baseURL, supported)
         return supported
     }

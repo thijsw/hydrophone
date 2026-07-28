@@ -3,7 +3,9 @@ import Foundation
 @testable import Hydrophone
 
 /// Response envelope + model decoding against representative JSON, including
-/// the failed-status path. See docs/02-opensubsonic-api.md, docs/08-testing.md.
+/// the failed-status path. The JSON fixtures predate the generic
+/// `ListBody`/`ObjectBody` payloads and are kept byte-identical — they are the
+/// behavior lock for that refactor. See docs/02-opensubsonic-api.md.
 struct DecodingTests {
     private let decoder = SubsonicClient.makeDecoder()
 
@@ -16,10 +18,10 @@ struct DecodingTests {
         "starred":"2023-04-01T10:00:00.000Z"}]}}}
         """
         let data = Data(json.utf8)
-        let wrapper = try decoder.decode(SubsonicResponseWrapper<AlbumList2Body>.self, from: data)
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ListBody<Album>>.self, from: data)
         #expect(wrapper.response.info.status == "ok")
         #expect(wrapper.response.info.openSubsonic == true)
-        let albums = try #require(wrapper.response.body?.albumList2.album)
+        let albums = try #require(wrapper.response.body?.items)
         #expect(albums.count == 1)
         #expect(albums[0].name == "Kind of Blue")
         #expect(albums[0].year == 1959)
@@ -38,6 +40,19 @@ struct DecodingTests {
         #expect(wrapper.response.body == nil)
     }
 
+    @Test func failedStatusSkipsPayloadDecodingForGenericBodies() throws {
+        // On a failed status InnerResponse must not attempt the payload —
+        // ListBody/ObjectBody would throw on the absent payload key.
+        let json = """
+        {"subsonic-response":{"status":"failed","version":"1.16.1",
+        "error":{"code":70,"message":"Not found."}}}
+        """
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ListBody<Song>>.self,
+                                         from: Data(json.utf8))
+        #expect(wrapper.response.body == nil)
+        #expect(wrapper.response.error?.code == 70)
+    }
+
     @Test func decodesPlaylistWithEntries() throws {
         let json = """
         {"subsonic-response":{"status":"ok","version":"1.16.1","playlist":{
@@ -47,8 +62,8 @@ struct DecodingTests {
         {"id":"s2","title":"Track Two","artist":"B","duration":240}]}}}
         """
         let data = Data(json.utf8)
-        let wrapper = try decoder.decode(SubsonicResponseWrapper<PlaylistBody>.self, from: data)
-        let playlist = try #require(wrapper.response.body?.playlist)
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ObjectBody<Playlist>>.self, from: data)
+        let playlist = try #require(wrapper.response.body?.value)
         #expect(playlist.name == "Roadtrip")
         #expect(playlist.entry?.count == 2)
         #expect(playlist.entry?[1].title == "Track Two")
@@ -62,8 +77,8 @@ struct DecodingTests {
         "genres":[{"name":"Jazz"},{"name":"Bebop"}]}]}}}
         """
         let data = Data(json.utf8)
-        let wrapper = try decoder.decode(SubsonicResponseWrapper<RandomSongsBody>.self, from: data)
-        let song = try #require(wrapper.response.body?.randomSongs.song?.first)
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ListBody<Song>>.self, from: data)
+        let song = try #require(wrapper.response.body?.items.first)
         #expect(song.genre == nil)
         #expect(song.displayGenre == "Jazz")
     }
@@ -76,9 +91,9 @@ struct DecodingTests {
         "largeImageUrl":"https://example/img.jpg",
         "similarArtist":[{"id":"ar2","name":"John Coltrane","coverArt":"ar-ar2","albumCount":3}]}}}
         """
-        let wrapper = try decoder.decode(SubsonicResponseWrapper<ArtistInfo2Body>.self,
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ObjectBody<ArtistInfo>>.self,
                                          from: Data(json.utf8))
-        let info = try #require(wrapper.response.body?.artistInfo2)
+        let info = try #require(wrapper.response.body?.value)
         #expect(info.similarArtist?.first?.name == "John Coltrane")
         let bio = try #require(info.plainBiography)
         #expect(bio == "Miles Davis was an American trumpeter & bandleader.")
@@ -90,9 +105,9 @@ struct DecodingTests {
         {"id":"s1","title":"So What","artist":"Miles Davis","duration":545},
         {"id":"s2","title":"Naima","artist":"John Coltrane","duration":263}]}}}
         """
-        let wrapper = try decoder.decode(SubsonicResponseWrapper<SimilarSongs2Body>.self,
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ListBody<Song>>.self,
                                          from: Data(json.utf8))
-        let songs = try #require(wrapper.response.body?.similarSongs2.song)
+        let songs = try #require(wrapper.response.body?.items)
         #expect(songs.count == 2)
         #expect(songs[1].title == "Naima")
     }
@@ -102,17 +117,65 @@ struct DecodingTests {
         {"subsonic-response":{"status":"ok","version":"1.16.1","topSongs":{"song":[
         {"id":"s1","title":"Blue in Green","artist":"Miles Davis","duration":328}]}}}
         """
-        let wrapper = try decoder.decode(SubsonicResponseWrapper<TopSongsBody>.self,
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ListBody<Song>>.self,
                                          from: Data(json.utf8))
-        #expect(wrapper.response.body?.topSongs.song?.count == 1)
+        #expect(wrapper.response.body?.items.count == 1)
 
-        // Servers with no data send an empty object — must not throw.
+        // Servers with no data send an empty object — must decode as [].
         let empty = """
         {"subsonic-response":{"status":"ok","version":"1.16.1","topSongs":{}}}
         """
-        let emptyWrapper = try decoder.decode(SubsonicResponseWrapper<TopSongsBody>.self,
+        let emptyWrapper = try decoder.decode(SubsonicResponseWrapper<ListBody<Song>>.self,
                                               from: Data(empty.utf8))
-        #expect(emptyWrapper.response.body?.topSongs.song == nil)
+        #expect(emptyWrapper.response.body?.items.isEmpty == true)
+    }
+
+    @Test func decodesArtistIndexDespiteSiblingMetadata() throws {
+        // The `artists` container carries scalar keys next to the index list —
+        // the reason ListBody takes its element key from the type instead of
+        // inferring "the single inner key".
+        let json = """
+        {"subsonic-response":{"status":"ok","version":"1.16.1","artists":{
+        "ignoredArticles":"The El La Los Las Le","lastModified":1678886400000,
+        "index":[
+        {"name":"C","artist":[{"id":"ar1","name":"John Coltrane","albumCount":3}]},
+        {"name":"D","artist":[{"id":"ar2","name":"Miles Davis","albumCount":9}]}]}}}
+        """
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ListBody<ArtistIndex>>.self,
+                                         from: Data(json.utf8))
+        let buckets = try #require(wrapper.response.body?.items)
+        #expect(buckets.count == 2)
+        #expect(buckets.flatMap { $0.artist ?? [] }.map(\.name)
+                == ["John Coltrane", "Miles Davis"])
+    }
+
+    @Test func missingPayloadKeyThrows() {
+        // An ok envelope with no payload at all — the old non-optional bodies
+        // threw here too (surfaced as SubsonicError.decoding by the client).
+        let json = """
+        {"subsonic-response":{"status":"ok","version":"1.16.1"}}
+        """
+        #expect(throws: DecodingError.self) {
+            _ = try decoder.decode(SubsonicResponseWrapper<ListBody<Song>>.self,
+                                   from: Data(json.utf8))
+        }
+        #expect(throws: DecodingError.self) {
+            _ = try decoder.decode(SubsonicResponseWrapper<ObjectBody<Album>>.self,
+                                   from: Data(json.utf8))
+        }
+    }
+
+    @Test func decodesStarred2BothLists() throws {
+        let json = """
+        {"subsonic-response":{"status":"ok","version":"1.16.1","starred2":{
+        "album":[{"id":"a1","name":"Giant Steps"}],
+        "song":[{"id":"s1","title":"Naima"},{"id":"s2","title":"Countdown"}]}}}
+        """
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ObjectBody<StarredContent>>.self,
+                                         from: Data(json.utf8))
+        let starred = try #require(wrapper.response.body?.value)
+        #expect(starred.album?.count == 1)
+        #expect(starred.song?.count == 2)
     }
 
     @Test func decodesDatesWithoutFractionalSeconds() throws {
@@ -121,7 +184,7 @@ struct DecodingTests {
         "id":"a2","name":"X","starred":"2022-01-02T03:04:05Z"}}}
         """
         let data = Data(json.utf8)
-        let wrapper = try decoder.decode(SubsonicResponseWrapper<AlbumBody>.self, from: data)
-        #expect(wrapper.response.body?.album.isStarred == true)
+        let wrapper = try decoder.decode(SubsonicResponseWrapper<ObjectBody<Album>>.self, from: data)
+        #expect(wrapper.response.body?.value.isStarred == true)
     }
 }

@@ -11,8 +11,7 @@ extension LibraryModel {
 
     func reloadPlaylists() async {
         do {
-            let body = try await client.send(.playlists, as: PlaylistsBody.self)
-            playlists = (body.playlists.playlist ?? [])
+            playlists = try await client.list(.playlists, of: Playlist.self)
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         } catch {
             // keep existing
@@ -20,12 +19,7 @@ extension LibraryModel {
     }
 
     func playlist(id: String) async -> Playlist? {
-        do {
-            let body = try await client.send(.playlist(id: id), as: PlaylistBody.self)
-            return body.playlist
-        } catch {
-            return nil
-        }
+        try? await client.object(.playlist(id: id), as: Playlist.self)
     }
 
     // MARK: - Playlist editing (M5)
@@ -34,10 +28,10 @@ extension LibraryModel {
     /// playlist (when the server echoes it) so callers can select it.
     @discardableResult
     func createPlaylist(name: String, songIds: [String] = []) async -> Playlist? {
-        let created = try? await client.send(.createPlaylist(name: name, songIds: songIds),
-                                             as: PlaylistBody.self)
+        let created = try? await client.object(.createPlaylist(name: name, songIds: songIds),
+                                               as: Playlist.self)
         await reloadPlaylists()
-        return created?.playlist
+        return created
     }
 
     func deletePlaylist(id: String) async {

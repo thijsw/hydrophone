@@ -144,9 +144,9 @@ final class ConnectionModel {
     func startLibraryScan() async {
         scanMessage = "Requesting scan…"
         do {
-            let body = try await client.send(.startScan, as: ScanStatusBody.self)
-            let count = body.scanStatus.count.map { " — \($0) items" } ?? ""
-            scanMessage = (body.scanStatus.scanning ? "Scanning" : "Scan finished") + count
+            let status = try await client.object(.startScan, as: ScanStatus.self)
+            let count = status.count.map { " — \($0) items" } ?? ""
+            scanMessage = (status.scanning ? "Scanning" : "Scan finished") + count
         } catch {
             scanMessage = error.userMessage
         }

@@ -27,14 +27,24 @@ struct PlayQueueTests {
 
     @Test func playQueueBodyDecodesStringAndNumericCurrent() throws {
         let decoder = SubsonicClient.makeDecoder()
-        let stringCurrent = try decoder.decode(PlayQueueBody.self, from: Data(
+        let stringCurrent = try decoder.decode(ObjectBody<PlayQueue>.self, from: Data(
             #"{"playQueue":{"entry":[{"id":"s1","title":"T"}],"current":"s1","position":9000}}"#.utf8))
-        #expect(stringCurrent.playQueue?.current == "s1")
-        #expect(stringCurrent.playQueue?.position == 9000)
+        #expect(stringCurrent.value.current == "s1")
+        #expect(stringCurrent.value.position == 9000)
 
-        let numericCurrent = try decoder.decode(PlayQueueBody.self, from: Data(
+        let numericCurrent = try decoder.decode(ObjectBody<PlayQueue>.self, from: Data(
             #"{"playQueue":{"entry":[{"id":"42","title":"T"}],"current":42}}"#.utf8))
-        #expect(numericCurrent.playQueue?.current == "42")
+        #expect(numericCurrent.value.current == "42")
+    }
+
+    @Test func emptyPlayQueueEnvelopeResolvesToNilViaTry() throws {
+        // A server with no saved queue omits the payload key entirely;
+        // ObjectBody throws and the caller's `try?` turns that into "no
+        // restore" — the same observable behavior as the old optional body.
+        let decoder = SubsonicClient.makeDecoder()
+        let empty = try? decoder.decode(ObjectBody<PlayQueue>.self, from: Data(
+            #"{"status":"ok","version":"1.16.1"}"#.utf8))
+        #expect(empty == nil)
     }
 
     // MARK: Snapshot

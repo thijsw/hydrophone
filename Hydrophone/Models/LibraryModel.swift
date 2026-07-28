@@ -97,8 +97,7 @@ final class LibraryModel {
         if case .loading = albumsState { return }
         albumsState = .loading
         do {
-            let body = try await client.send(albumPageEndpoint(), as: AlbumList2Body.self)
-            let page = body.albumList2.album ?? []
+            let page = try await client.list(albumPageEndpoint(), of: Album.self)
             albums.append(contentsOf: page)
             albumOffset += page.count
             albumsExhausted = page.count < Self.pageSize
@@ -152,8 +151,8 @@ final class LibraryModel {
         if case .loading = artistsState { return }
         artistsState = .loading
         do {
-            let body = try await client.send(.artists, as: ArtistsBody.self)
-            artists = (body.artists.index ?? []).flatMap { $0.artist ?? [] }
+            artists = try await client.list(.artists, of: ArtistIndex.self)
+                .flatMap { $0.artist ?? [] }
             artistsState = .loaded(())
         } catch {
             artistsState = .failed(error.userMessage)
@@ -167,8 +166,7 @@ final class LibraryModel {
         if case .loading = songsState { return }
         songsState = .loading
         do {
-            let body = try await client.send(.randomSongs(size: 500), as: RandomSongsBody.self)
-            songs = body.randomSongs.song ?? []
+            songs = try await client.list(.randomSongs(size: 500), of: Song.self)
             songsState = .loaded(())
         } catch {
             songsState = .failed(error.userMessage)
@@ -179,8 +177,7 @@ final class LibraryModel {
     /// from the Songs sample above so the visible list isn't disturbed.
     /// Best-effort: an empty result simply leaves playback untouched.
     func randomBatch(size: Int = 500) async -> [Song] {
-        let body = try? await client.send(.randomSongs(size: size), as: RandomSongsBody.self)
-        return body?.randomSongs.song ?? []
+        (try? await client.list(.randomSongs(size: size), of: Song.self)) ?? []
     }
 
     // MARK: - Genres
@@ -193,8 +190,7 @@ final class LibraryModel {
         genresLoading = true
         defer { genresLoading = false }
         do {
-            let body = try await client.send(.genres, as: GenresBody.self)
-            genres = (body.genres.genre ?? [])
+            genres = try await client.list(.genres, of: Genre.self)
                 .sorted { $0.value.localizedCaseInsensitiveCompare($1.value) == .orderedAscending }
         } catch {
             genres = []
@@ -218,9 +214,9 @@ final class LibraryModel {
 
     func reloadStarred() async {
         do {
-            let body = try await client.send(.starred2, as: Starred2Body.self)
-            starredAlbums = body.starred2.album ?? []
-            starredSongs = body.starred2.song ?? []
+            let starred = try await client.object(.starred2, as: StarredContent.self)
+            starredAlbums = starred.album ?? []
+            starredSongs = starred.song ?? []
             starredLoaded = true
         } catch {
             // leave existing values; surfaced via UI empty state
@@ -240,14 +236,14 @@ final class LibraryModel {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return SearchResults() }
         do {
-            let body = try await client.send(
+            let found = try await client.object(
                 .search3(query: trimmed, songCount: 50, songOffset: 0, albumCount: 20, artistCount: 20),
-                as: Search3Body.self
+                as: SearchContent.self
             )
             return SearchResults(
-                artists: body.searchResult3.artist ?? [],
-                albums: body.searchResult3.album ?? [],
-                songs: body.searchResult3.song ?? []
+                artists: found.artist ?? [],
+                albums: found.album ?? [],
+                songs: found.song ?? []
             )
         } catch {
             return SearchResults()
@@ -286,37 +282,22 @@ final class LibraryModel {
     // MARK: - Album detail
 
     func songs(forAlbum id: String) async -> [Song] {
-        do {
-            let body = try await client.send(.album(id: id), as: AlbumBody.self)
-            return body.album.song ?? []
-        } catch {
-            return []
-        }
+        (try? await client.object(.album(id: id), as: Album.self))?.song ?? []
     }
 
     /// The full album record for an id — used by "Go to Album" from a track,
     /// where only the song's `albumId` is at hand.
     func album(id: String) async -> Album? {
-        try? await client.send(.album(id: id), as: AlbumBody.self).album
+        try? await client.object(.album(id: id), as: Album.self)
     }
 
     func albums(forArtist id: String) async -> [Album] {
-        do {
-            let body = try await client.send(.artist(id: id), as: ArtistBody.self)
-            return body.artist.album ?? []
-        } catch {
-            return []
-        }
+        (try? await client.object(.artist(id: id), as: Artist.self))?.album ?? []
     }
 
     func songs(forGenre genre: String) async -> [Song] {
-        do {
-            let body = try await client.send(.songsByGenre(genre, count: Self.pageSize, offset: 0),
-                                             as: SongsByGenreBody.self)
-            return body.songsByGenre.song ?? []
-        } catch {
-            return []
-        }
+        (try? await client.list(.songsByGenre(genre, count: Self.pageSize, offset: 0),
+                                of: Song.self)) ?? []
     }
 
 }
@@ -326,22 +307,18 @@ final class LibraryModel {
 extension LibraryModel {
     /// Bio + similar artists for the artist page. Best-effort: nil simply
     /// hides the extras (servers without a metadata agent return little).
-    func artistInfo(id: String) async -> ArtistInfo2Body.Info? {
-        try? await client.send(.artistInfo2(id: id, count: 12), as: ArtistInfo2Body.self).artistInfo2
+    func artistInfo(id: String) async -> ArtistInfo? {
+        try? await client.object(.artistInfo2(id: id, count: 12), as: ArtistInfo.self)
     }
 
     /// Similar-song mix seeding Start Radio. `id` may be a song or artist id.
     func similarSongs(id: String, count: Int = 50) async -> [Song] {
-        let body = try? await client.send(.similarSongs2(id: id, count: count),
-                                          as: SimilarSongs2Body.self)
-        return body?.similarSongs2.song ?? []
+        (try? await client.list(.similarSongs2(id: id, count: count), of: Song.self)) ?? []
     }
 
     /// Radio fallback for servers with no similarity data for an artist.
     func topSongs(artist name: String, count: Int = 50) async -> [Song] {
-        let body = try? await client.send(.topSongs(artist: name, count: count),
-                                          as: TopSongsBody.self)
-        return body?.topSongs.song ?? []
+        (try? await client.list(.topSongs(artist: name, count: count), of: Song.self)) ?? []
     }
 
     /// Random whole albums for Shuffle Albums, honoring the active grid
@@ -358,8 +335,7 @@ extension LibraryModel {
             endpoint = .albumList2(type: "byYear", size: 200, offset: 0,
                                    fromYear: from, toYear: through)
         }
-        let body = try? await client.send(endpoint, as: AlbumList2Body.self)
-        let albums = body?.albumList2.album ?? []
+        let albums = (try? await client.list(endpoint, of: Album.self)) ?? []
         if case .none = albumFilter { return albums }
         return Array(albums.shuffled().prefix(count))
     }
@@ -398,8 +374,6 @@ extension LibraryModel {
     }
 
     private func albumList(type: String) async -> [Album] {
-        let body = try? await client.send(.albumList2(type: type, size: 20, offset: 0),
-                                          as: AlbumList2Body.self)
-        return body?.albumList2.album ?? []
+        (try? await client.list(.albumList2(type: type, size: 20, offset: 0), of: Album.self)) ?? []
     }
 }
