@@ -50,6 +50,57 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Elegance pass: one implementation per idea (2026-07-28)
+Codebase-wide refactor removing duplicated logic (six commits, no feature
+changes). The recurring smell was the same idea hand-written 2–3 times:
+- **Networking**: ~15 near-identical response body structs collapsed into
+  generic `ListBody<Element>`/`ObjectBody<Payload>` (outer method key
+  inferred as the one non-status envelope key; the inner list key comes
+  from `SubsonicListElement.listKey` because containers like `getArtists`
+  carry sibling metadata). Client gains `list(_:of:)`/`object(_:as:)`; the
+  `body.<method>.<element> ?? []` ritual left ~20 call sites. `Endpoint`
+  query building is a small `@QueryList` result builder (nil-dropping, one
+  Bool spelling); `star`/`unstar` merged into `favorite(id:kind:starred:)`.
+  EndpointGoldenTests lock the exact query-item arrays; DecodingTests kept
+  byte-identical fixtures across the migration.
+- **Models**: `LibraryModel.load(_:into:)` owns the `.loading→.loaded/
+  .failed` ritual, `fetchList`/`mutate(_:thenReload:)` the best-effort
+  shapes. `PlayerModel`: gapless advance now shares `setCurrent` with
+  manual starts (they had drifted), `handoff(for:)` derives decode args
+  once, three Now Playing publishers became `publishNowPlaying(...)`.
+- **UI**: optimistic starring centralized in `LibraryModel`
+  (override-then-reconcile; views read `isStarred`, the AppKit table takes
+  a `starSignature` value so closure-time reads still re-render); one
+  `Binding.scrollID(scope:topIDs:)` replaces three hand-rolled scroll-
+  memory bridges; `player.hasNowPlayingContent` replaces the triplicated
+  panel gate; ArtworkCache's Quick Look original fetch now rides the same
+  limiter+retry path as sized fetches.
+- **Engine** (PlaybackService): `reapplyRoute(force:)` unifies the three
+  route/config observers (the devices-changed idle path gains the guarded
+  engine restart the config path had — ruled drift, not intent);
+  `ensureEngineReady(for:)` extracts the graph lifecycle out of
+  `schedule()`; the 80 ms read-ahead busy-poll became a drain signal
+  (`CheckedContinuation` resumed from `bufferCompleted` and `hardReset` —
+  the latter is what makes a cancelled-mid-throttle decode loop unable to
+  hang); the four lifecycle booleans became two orthogonal enums,
+  `Transport {idle, preroll(paused:), playing, paused}` and `Supply
+  {decoding, awaitingNext, exhausted}`. One deliberate change: resume-
+  during-preroll now waits for the preroll to fill instead of starting the
+  node early (underrun-prone + duplicate event). `PlayerModel.state`'s
+  two-writer arrangement documented as intent (instant space bar).
+- Verified: full suite + SwiftLint clean after every phase; new tests
+  (endpoint goldens, decode edge cases incl. `ignoredArticles`, starring
+  rollback, manual-vs-gapless transition equivalence). Live vs the demo
+  server: restore→resume, pause/resume, three consecutive gapless
+  boundaries, 75 s soak with zero underruns (drain signal healthy), seek
+  to 80% + resume, ⌘L star visible in Favorites, panel toggle off/on,
+  quit/relaunch queue restore. Still needs by-hand checks (no hardware
+  here): USB-DAC/AirPlay route switches and mixed-rate rate matching.
+- Noted while verifying (pre-existing, unchanged): the decode read-ahead
+  cap tolerates large overshoot — followers pre-buffer minutes before a
+  boundary because read-ahead is measured at schedule time, after the
+  pump/consume split. Worth a look someday; not touched in this pass.
+
 ## Artwork: album-keyed cache identity + fetch retry (2026-07-28)
 Fixed redundant cover downloads and the hero's late appearance. Servers
 give every *song* its own `coverArt` id even though all tracks of an album
