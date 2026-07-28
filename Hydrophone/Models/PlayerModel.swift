@@ -16,6 +16,8 @@ final class PlayerModel {
     private(set) var queue: [Song] = []
     private(set) var currentIndex: Int?
 
+    /// Two writers by design: play/skip write `.playing` optimistically (the
+    /// instant space bar); the engine's `.stateChanged` is authoritative.
     private(set) var state: PlaybackState = .stopped
     var position: TimeInterval = 0
     var duration: TimeInterval = 0
@@ -148,9 +150,7 @@ final class PlayerModel {
     // MARK: - Queue editing (Up Next)
 
     /// Jump to and play a specific queue index (hard start).
-    func playFromQueue(at index: Int) {
-        advanceManual(to: index)
-    }
+    func playFromQueue(at index: Int) { advanceManual(to: index) }
 
     /// Move queue items (SwiftUI `onMove`), keeping the current track tracked.
     /// Index bookkeeping is positional, never by song id — the same song can

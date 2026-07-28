@@ -78,10 +78,34 @@ actor PlaybackService {
         var forceTranscode = false
     }
 
+    /// Where the player node is in its start/pause lifecycle for the current
+    /// hard start. `.preroll` buffers audio before starting the node
+    /// (prevents startup underruns/crackle while the network+decoder ramp
+    /// up); its `paused` flag holds a pause requested before the node ever
+    /// started.
+    private enum Transport: Equatable {
+        case idle                  // after hardReset; nothing scheduled
+        case preroll(paused: Bool) // buffers accumulating; node not started
+        case playing
+        case paused
+
+        /// The node has been started for this timeline (playing or paused).
+        var hasStarted: Bool { self == .playing || self == .paused }
+        /// A pause is in effect, whether the node ever started or not.
+        var isPausedish: Bool { self == .paused || self == .preroll(paused: true) }
+    }
+
+    /// Where the decode feed is relative to the queue. Orthogonal to
+    /// `Transport`: the feed can be exhausted while audio still plays out.
+    private enum Supply: Equatable {
+        case decoding      // a decode is in flight (or about to be)
+        case awaitingNext  // decode done; .wantNext emitted, awaiting reply
+        case exhausted     // enqueueNoMore — the timeline has no successor
+    }
+
     private var spans: [TrackSpan] = []
     private var cumulativeFrames: AVAudioFramePosition = 0
     private var outstandingBuffers = 0
-    private var noMoreTracks = false
     private var reportedIndex: Int?
     /// Last position reported by tick() — the recovery fallback when the node
     /// clock is already gone (config changes reset `lastRenderTime`).
@@ -89,15 +113,11 @@ actor PlaybackService {
     /// When the last recovery ran; config-change echoes provoked by the
     /// recovery itself (engine rebuild, format renegotiation) are swallowed.
     private var lastRecovery: ContinuousClock.Instant?
-    private var awaitingNext = false
 
     private var generation = 0
-    private var isPaused = false
+    private var transport: Transport = .idle
+    private var supply: Supply = .decoding
     private var volume: Float = 1.0
-    /// Whether playback has been started for the current hard-start. Used to
-    /// pre-roll a buffer before starting the node (prevents startup underruns /
-    /// crackle while the network+decoder ramp up).
-    private var hasStartedPlayback = false
     /// Seconds of audio to buffer before starting playback.
     private var prerollFrames: AVAudioFramePosition {
         AVAudioFramePosition(canonicalFormat.sampleRate * 2.0)
@@ -164,7 +184,7 @@ extension PlaybackService {
         generation += 1
         let gen = generation
         hardReset()
-        isPaused = false
+        transport = .preroll(paused: false)
         // With matching off, new timelines return to the fixed base format.
         if !matchRateEnabled { canonicalFormat = baseFormat }
         emit(.stateChanged(.buffering))
@@ -181,8 +201,8 @@ extension PlaybackService {
     /// follower fails in turn and playback races through the queue.
     func enqueueNext(songId: String, suffix: String?, duration: TimeInterval, index: Int,
                      gain: Float = 1) {
-        guard awaitingNext else { return }
-        awaitingNext = false
+        guard supply == .awaitingNext else { return }
+        supply = .decoding
         let inherited = spans.last?.forceTranscode ?? false
         startDecode(DecodeRequest(songId: songId, suffix: inherited ? "mp3" : suffix,
                                   duration: duration, index: index,
@@ -190,29 +210,48 @@ extension PlaybackService {
                                   forceTranscode: inherited))
     }
 
-    /// No successor — the current track is the last one.
+    /// No successor — the current track is the last one. Deliberately
+    /// unguarded: `clearUpNext` sends this spontaneously, outside the
+    /// `.wantNext` reply protocol.
     func enqueueNoMore() {
-        awaitingNext = false
-        noMoreTracks = true
+        supply = .exhausted
     }
 
     func pause() {
-        guard node.isPlaying else { isPaused = true; return }
-        node.pause()
-        isPaused = true
-        stopPositionUpdates()
-        endActivity()
-        emit(.stateChanged(.paused))
+        switch transport {
+        case .playing:
+            node.pause()
+            transport = .paused
+            stopPositionUpdates()
+            endActivity()
+            emit(.stateChanged(.paused))
+        case .preroll:
+            // The node hasn't started; hold the pause so the preroll
+            // threshold doesn't start it (resume() lifts this).
+            transport = .preroll(paused: true)
+        case .paused, .idle:
+            break
+        }
     }
 
     func resume() {
         guard engineConnected else { return }
-        if !engine.isRunning { try? engine.start() }
-        node.play()
-        isPaused = false
-        beginActivity()
-        startPositionUpdates()
-        emit(.stateChanged(.playing))
+        switch transport {
+        case .paused:
+            if !engine.isRunning { try? engine.start() }
+            node.play()
+            transport = .playing
+            beginActivity()
+            startPositionUpdates()
+            emit(.stateChanged(.playing))
+        case .preroll(paused: true):
+            // Un-pause the preroll and let the threshold start the node.
+            // (The old flag code started it immediately with a part-filled
+            // buffer — underrun-prone, plus a duplicate .playing event.)
+            transport = .preroll(paused: false)
+        case .playing, .idle, .preroll(paused: false):
+            break
+        }
     }
 
     func stop() {
@@ -400,7 +439,7 @@ extension PlaybackService {
     /// matters only when the triggering event stopped the engine (a config
     /// change always does; a vanished pinned device can) — otherwise a no-op.
     private func reapplyRoute(force: Bool) {
-        if hasStartedPlayback {
+        if transport.hasStarted {
             recoverPlayback(force: force)
         } else {
             applyOutputDevice()
@@ -458,7 +497,7 @@ extension PlaybackService {
     private func handleConfigChange() {
         guard engineConnected else { return }
         Self.log.info("""
-        config change (started=\(self.hasStartedPlayback, privacy: .public), \
+        config change (started=\(self.transport.hasStarted, privacy: .public), \
         engineRunning=\(self.engine.isRunning, privacy: .public), \
         nodePlaying=\(self.node.isPlaying, privacy: .public))
         """)
@@ -502,7 +541,7 @@ extension PlaybackService {
             position = active.seekBase + Double(sample - active.startFrame) / canonicalFormat.sampleRate
             if active.duration > 0 { position = min(position, active.duration) }
         }
-        let wasPaused = isPaused
+        let wasPaused = transport.isPausedish
         engine.stop()
         applyOutputDevice()
         try? engine.start()
@@ -591,7 +630,7 @@ extension PlaybackService {
         }
 
         // Pre-roll: only start once enough audio is buffered to avoid underruns.
-        if !hasStartedPlayback && !isPaused && cumulativeFrames >= prerollFrames {
+        if transport == .preroll(paused: false), cumulativeFrames >= prerollFrames {
             startNodePlayback()
         }
     }
@@ -606,8 +645,8 @@ extension PlaybackService {
     }
 
     private func startNodePlayback() {
-        guard !hasStartedPlayback, !isPaused else { return }
-        hasStartedPlayback = true
+        guard transport == .preroll(paused: false) else { return }
+        transport = .playing
         Self.log.info("node playback starting (engineRunning=\(self.engine.isRunning, privacy: .public))")
         if !engine.isRunning { try? engine.start() }
         node.play()
@@ -626,11 +665,11 @@ extension PlaybackService {
             return
         }
         // A track shorter than the pre-roll window: start now rather than wait.
-        if !hasStartedPlayback && !isPaused && cumulativeFrames > 0 {
+        if transport == .preroll(paused: false), cumulativeFrames > 0 {
             startNodePlayback()
         }
         // Ready to pre-buffer the successor of this track.
-        awaitingNext = true
+        supply = .awaitingNext
         emit(.wantNext(afterIndex: request.index))
     }
 
@@ -639,11 +678,11 @@ extension PlaybackService {
         outstandingBuffers -= 1
         signalDrain()
         guard outstandingBuffers <= 0 else { return }
-        if noMoreTracks && allDecodeComplete {
+        if supply == .exhausted && allDecodeComplete {
             stopPositionUpdates()
             if let last = spans.last { emit(.position(time: last.duration, duration: last.duration)) }
             emit(.ended)
-        } else if hasStartedPlayback {
+        } else if transport.hasStarted {
             // Every scheduled buffer has finished playing but more audio is still
             // expected (decode/network hasn't kept up): the node will now render
             // silence until the next buffer arrives — an underrun heard as a
@@ -730,10 +769,9 @@ extension PlaybackService {
         spans.removeAll()
         cumulativeFrames = 0
         outstandingBuffers = 0
-        noMoreTracks = false
-        awaitingNext = false
         reportedIndex = nil
-        hasStartedPlayback = false
+        transport = .idle
+        supply = .decoding
         // Engine stays connected at the canonical format; node.reset() clears
         // the scheduled buffer queue.
     }
