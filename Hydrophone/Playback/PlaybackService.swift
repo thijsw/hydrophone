@@ -104,6 +104,14 @@ actor PlaybackService {
     }
 
     private var decodeTask: Task<Void, Never>?
+    /// Wakes a throttled decode loop (see `throttleReadAhead`): resumed when
+    /// a buffer finishes playing or the timeline is torn down. One slot is
+    /// enough — at most one decode loop exists at a time, and all access is
+    /// actor-isolated. `Task.cancel()` cannot interrupt a checked
+    /// continuation, so the `hardReset` signal is what guarantees a stale
+    /// throttled loop always wakes, fails its generation check, and releases
+    /// its loader.
+    private var drainSignal: CheckedContinuation<Void, Never>?
     private var positionTask: Task<Void, Never>?
     private var activity: (any NSObjectProtocol)?
 
@@ -381,14 +389,22 @@ extension PlaybackService {
         outputDeviceUID = (uid?.isEmpty == false) ? uid : nil
         UserDefaults.standard.set(outputDeviceUID, forKey: "outputDeviceUID")
         guard engineConnected else { return }
+        reapplyRoute(force: true)
+    }
+
+    /// The one decision point for every route/config change: recover live
+    /// playback (a live property swap wedges the graph silently when the new
+    /// device's hardware format differs — seen with a USB DAC; rebuilding +
+    /// restarting at the playhead costs a sub-second gap but is reliable on
+    /// every device), or just re-point the idle graph. The guarded start
+    /// matters only when the triggering event stopped the engine (a config
+    /// change always does; a vanished pinned device can) — otherwise a no-op.
+    private func reapplyRoute(force: Bool) {
         if hasStartedPlayback {
-            // A live property swap wedges the graph silently when the new
-            // device's hardware format differs (seen with a USB DAC: audio
-            // gone until a full rebuild). Rebuild + restart at the playhead
-            // instead — a sub-second gap, but reliable on every device.
-            recoverPlayback(force: true)
+            recoverPlayback(force: force)
         } else {
             applyOutputDevice()
+            if !engine.isRunning { try? engine.start() }
         }
     }
 
@@ -446,12 +462,9 @@ extension PlaybackService {
         engineRunning=\(self.engine.isRunning, privacy: .public), \
         nodePlaying=\(self.node.isPlaying, privacy: .public))
         """)
-        if hasStartedPlayback {
-            recoverPlayback()
-        } else {
-            applyOutputDevice()
-            if !engine.isRunning { try? engine.start() }
-        }
+        // Unforced: recovery-provoked echoes must be swallowed (see
+        // recoverPlayback's guard).
+        reapplyRoute(force: false)
     }
 
     /// A device appeared or disappeared. Only Hydrophone's own pinned route is
@@ -467,11 +480,7 @@ extension PlaybackService {
         // or returned (re-pin may cross hardware formats), a live property
         // swap isn't trustworthy — rebuild and resume at the playhead.
         Self.log.info("output route target changed; recovering")
-        if hasStartedPlayback {
-            recoverPlayback(force: true)
-        } else {
-            applyOutputDevice()
-        }
+        reapplyRoute(force: true)
     }
 
     /// Rebuild the route and hard-restart the current track at the playhead —
@@ -512,24 +521,33 @@ extension PlaybackService {
 extension PlaybackService {
     /// Back-pressure: once we're `maxReadAheadFrames` ahead, pause the network
     /// transfer and decoding until playback drains the buffer to
-    /// `minReadAheadFrames`, then resume. Awaiting frees the actor so scheduling,
-    /// buffer completions, and position ticks keep running.
+    /// `minReadAheadFrames`, then resume. Suspending frees the actor so
+    /// scheduling, buffer completions, and position ticks keep running.
     private func throttleReadAhead(loader: DataStreamLoader, gen: Int) async {
         guard readAheadFrames() >= maxReadAheadFrames else { return }
         loader.pause()
+        // A drain signal is a hint, not a guarantee — the loop re-checks its
+        // condition, so a spurious wake just suspends again.
         while gen == generation, !Task.isCancelled, readAheadFrames() >= minReadAheadFrames {
-            try? await Task.sleep(for: .milliseconds(80))
+            await withCheckedContinuation { drainSignal = $0 }
         }
         loader.resume()
     }
 
-    private func schedule(_ buffer: AVAudioPCMBuffer, spanArrayIndex: Int, gen: Int) {
-        guard gen == generation, spans.indices.contains(spanArrayIndex) else { return }
+    private func signalDrain() {
+        drainSignal?.resume()
+        drainSignal = nil
+    }
 
+    /// Idempotent graph readiness for a buffer's format: adopt a new native
+    /// rate (rate matching), reconnect the node when the connected rate
+    /// differs, then connect/volume/route/observe/prepare/start on first use.
+    /// Returns false when the engine can't start (a `.failed` was emitted).
+    private func ensureEngineReady(for format: AVAudioFormat) -> Bool {
         // A timeline-starting decode can arrive in a new native rate (rate
         // matching): adopt it and rebuild the node connection for it.
-        if buffer.format.sampleRate != canonicalFormat.sampleRate {
-            canonicalFormat = buffer.format
+        if format.sampleRate != canonicalFormat.sampleRate {
+            canonicalFormat = format
         }
         if engineConnected, connectedFormat?.sampleRate != canonicalFormat.sampleRate {
             engine.stop()
@@ -547,9 +565,15 @@ extension PlaybackService {
             engine.prepare()
             do { try engine.start() } catch {
                 emit(.failed("Audio engine failed to start: \(error.localizedDescription)"))
-                return
+                return false
             }
         }
+        return true
+    }
+
+    private func schedule(_ buffer: AVAudioPCMBuffer, spanArrayIndex: Int, gen: Int) {
+        guard gen == generation, spans.indices.contains(spanArrayIndex) else { return }
+        guard ensureEngineReady(for: buffer.format) else { return }
 
         // ReplayGain: bake the span's normalization into the samples. The
         // engine has one shared player node (gapless spans share a timeline),
@@ -613,6 +637,7 @@ extension PlaybackService {
     private func bufferCompleted(gen: Int) {
         guard gen == generation else { return }
         outstandingBuffers -= 1
+        signalDrain()
         guard outstandingBuffers <= 0 else { return }
         if noMoreTracks && allDecodeComplete {
             stopPositionUpdates()
@@ -696,6 +721,9 @@ extension PlaybackService {
 
     private func hardReset() {
         decodeTask?.cancel(); decodeTask = nil
+        // Cancellation can't interrupt a throttled loop's suspension — wake
+        // it so it exits on its generation check and resumes its loader.
+        signalDrain()
         stopPositionUpdates()
         node.stop()
         node.reset()
