@@ -2,7 +2,7 @@
 
 ## Vision
 
-Sonicwave is a **restrained, fully native macOS music player** for self-hosted
+Hydrophone is a **restrained, fully native macOS music player** for self-hosted
 **OpenSubsonic** libraries. It brings back the genuinely good *interaction
 design* of **iTunes 12.6.3** — a dense sortable track list, a column browser,
 an Up Next queue, a persistent now-playing header, fast global search — but

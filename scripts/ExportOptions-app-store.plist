@@ -5,7 +5,7 @@ Mac App Store export. Prerequisites (one-time, Apple Developer portal /
 App Store Connect — see docs/07-distribution.md):
   1. "Apple Distribution" + "Mac Installer Distribution" certificates in the
      login keychain.
-  2. An App Store Connect app record for nl.huell.sonicwave.
+  2. An App Store Connect app record for app.hydrophone.
   3. A "Mac App Store" provisioning profile for the bundle id (download via
      Xcode's account settings or the portal).
 Then: scripts/release.sh app-store

@@ -1,6 +1,6 @@
-# Sonicwave — Design & Planning Docs
+# Hydrophone — Design & Planning Docs
 
-Sonicwave is a native macOS music player for **OpenSubsonic** servers
+Hydrophone is a native macOS music player for **OpenSubsonic** servers
 (Navidrome as the reference server), written in modern SwiftUI for
 macOS 15 "Sequoia" and later, built with Xcode 26 / Swift 6.2.
 

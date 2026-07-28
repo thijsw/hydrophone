@@ -55,7 +55,7 @@ audio hardware.
     *real* `ProgressiveAudioSource` against synthesized audio instead of
     mocking it.
 - **Opt-in live tests** (`LiveDecodeTests`): run against a real OpenSubsonic
-  server only when `SONICWAVE_HOST`/`SONICWAVE_USER`/`SONICWAVE_PASS` are set;
+  server only when `HYDROPHONE_HOST`/`HYDROPHONE_USER`/`HYDROPHONE_PASS` are set;
   skipped otherwise, so no credentials are committed and CI stays hermetic.
 
 ## Current suite (Swift Testing, 67 tests)

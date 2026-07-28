@@ -1,6 +1,6 @@
 <div align="center">
 
-# Sonicwave
+# Hydrophone
 
 **A native macOS music player for your own OpenSubsonic server.**
 
@@ -14,15 +14,15 @@ Mac app. Streaming-only, audiophile-grade playback, no Electron in sight.
 ![Server](https://img.shields.io/badge/server-OpenSubsonic%20%2F%20Navidrome-8A2BE2)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-**[Website](https://thijsw.github.io/sonicwave/)** · **[Latest release](https://github.com/thijsw/sonicwave/releases/latest)**
+**[Website](https://hydrophone.app/)** · **[Latest release](https://github.com/thijsw/hydrophone/releases/latest)**
 
-![Sonicwave playing Abbey Road — track table, column browser and Now Playing panel with Up Next](site/assets/app-window.png)
+![Hydrophone playing Abbey Road — track table, column browser and Now Playing panel with Up Next](site/assets/app-window.png)
 
 </div>
 
 ---
 
-Sonicwave connects to a self-hosted [OpenSubsonic](https://opensubsonic.netlify.app/)
+Hydrophone connects to a self-hosted [OpenSubsonic](https://opensubsonic.netlify.app/)
 library ([Navidrome](https://www.navidrome.org/) is the reference server).
 It's for people who run their own music server and want a real Mac app —
 keyboard-friendly, low-footprint, native — instead of a browser tab.
@@ -58,7 +58,7 @@ keyboard-friendly, low-footprint, native — instead of a browser tab.
 ## Status
 
 Actively developed — see the
-[changelog](https://thijsw.github.io/sonicwave/#changelog) for what's new.
+[changelog](https://hydrophone.app/#changelog) for what's new.
 Mac App Store distribution is in progress. Deliberately out of scope for
 v1: offline downloads, smart playlists, multi-server profiles, tag editing.
 
@@ -68,8 +68,8 @@ Swift 6 (strict concurrency), SwiftUI with an AppKit core for the track
 table, and **zero third-party dependencies**. Build with Xcode 26, or:
 
 ```sh
-git clone https://github.com/thijsw/sonicwave.git && cd sonicwave
-xcodebuild -project Sonicwave.xcodeproj -scheme Sonicwave \
+git clone https://github.com/thijsw/hydrophone.git && cd hydrophone
+xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
   -destination 'platform=macOS' build   # or: test
 ```
 
@@ -78,10 +78,10 @@ the playback-engine deep-dive (gapless + crackle forensics), API layer,
 UI/UX rationale — and the running build log
 ([`docs/PROGRESS.md`](docs/PROGRESS.md)). The test suite runs hermetically —
 in CI on every push ([`tests.yml`](.github/workflows/tests.yml)) — and an
-opt-in live suite exercises a real server via `SONICWAVE_HOST/USER/PASS`
+opt-in live suite exercises a real server via `HYDROPHONE_HOST/USER/PASS`
 env vars. Releases ship through [`scripts/release.sh`](scripts/release.sh)
 (archive → notarize → staple) and [`scripts/publish.sh`](scripts/publish.sh);
-the [website](https://thijsw.github.io/sonicwave/) redeploys itself from
+the [website](https://hydrophone.app/) redeploys itself from
 [`site/`](site/) on every release.
 
 ## License

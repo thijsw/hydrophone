@@ -27,7 +27,7 @@ fallback is also possible.
 ## App Store Connect / packaging ✅
 
 - Bundle identifier, app category (Music), and app icon set.
-- `Info.plist`: app name "Sonicwave", versioning (`CFBundleShortVersionString`
+- `Info.plist`: app name "Hydrophone", versioning (`CFBundleShortVersionString`
   + build), minimum system version (macOS 14.0), `LSApplicationCategoryType`
   = `public.app-category.music`.
 - **Privacy:** the app sends credentials and stream requests only to the
@@ -48,14 +48,14 @@ needed (playback, Keychain, networking all work in the exported app).
 - **Developer ID path (working end-to-end):** archive → export → signature
   verification (`codesign --verify --strict` + Developer ID authority +
   `runtime` flag check) → notarize + staple + Gatekeeper assess (runs when a
-  `sonicwave` notarytool keychain profile exists; skipped with instructions
+  `hydrophone` notarytool keychain profile exists; skipped with instructions
   otherwise) → versioned zip. One-time setup for notarization:
-  `xcrun notarytool store-credentials sonicwave --apple-id … --team-id
+  `xcrun notarytool store-credentials hydrophone --apple-id … --team-id
   4HNWJ993V9` (app-specific password or ASC API key).
 - **Mac App Store path (config prepared; blocked on portal artifacts):**
   `release.sh app-store` exports an upload-ready `.pkg` once these exist —
   an **Apple Distribution** + **Mac Installer Distribution** certificate, an
-  App Store Connect app record for `nl.huell.sonicwave`, and a Mac App Store
+  App Store Connect app record for `app.hydrophone`, and a Mac App Store
   provisioning profile (prerequisites also listed in
   `ExportOptions-app-store.plist`).
 - Debug still signs with Developer ID (hardened runtime off) for the stable
@@ -67,7 +67,7 @@ needed (playback, Keychain, networking all work in the exported app).
   (`gh release create … --generate-notes`). The repository went public
   2026-07-15, so release downloads are public.
 - **Website:** `site/` holds the landing page, deployed to GitHub Pages by
-  `.github/workflows/pages.yml` (https://thijsw.github.io/sonicwave/). It
+  `.github/workflows/pages.yml` (https://hydrophone.app/). It
   redeploys on every push touching `site/` **and on every published
   release**, stamping the latest release tag into the page's
   `app-version` spans — the public download front door stays current with

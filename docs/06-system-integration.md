@@ -1,6 +1,6 @@
 # 06 — System Integration
 
-What makes Sonicwave feel native: it appears in Control Center / the Now Playing
+What makes Hydrophone feel native: it appears in Control Center / the Now Playing
 widget, responds to the media keys, restores its windows, and behaves like a
 proper Mac app. All of this is driven from the single `PlayerModel` (see `01`)
 via a `NowPlayingCenter` service so system state can never disagree with the UI.
@@ -28,7 +28,7 @@ via a `NowPlayingCenter` service so system state can never disagree with the UI.
   `MPRemoteCommandHandlerStatus`.
 - This is the **sanctioned** way to receive the keyboard/Touch Bar media keys
   (F7/F8/F9) — do **not** use low-level event taps. Registering remote commands
-  is what lets Sonicwave win the media keys when it's the active audio app.
+  is what lets Hydrophone win the media keys when it's the active audio app.
 - Disable commands that don't apply (e.g. no rating) so the system UI hides
   them.
 

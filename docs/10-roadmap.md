@@ -111,7 +111,7 @@ playback first (M3).
 ## Post-v1 feature milestones — ecosystem gap analysis (2026-07-17)
 
 From a survey of ~35 Subsonic/OpenSubsonic clients (desktop, web, mobile).
-Where Sonicwave already leads: cross-device queue sync via `savePlayQueue`
+Where Hydrophone already leads: cross-device queue sync via `savePlayQueue`
 (almost unclaimed ecosystem-wide), hardware sample-rate matching, true
 streaming gapless. The gaps below are ordered by how hard the ecosystem
 pressures them vs implementation cost. Sizes: S ≈ days, M ≈ a week-plus,

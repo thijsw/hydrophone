@@ -1,18 +1,18 @@
 # CLAUDE.md
 
-Sonicwave: native macOS (15+) music player for OpenSubsonic/Navidrome servers.
+Hydrophone: native macOS (15+) music player for OpenSubsonic/Navidrome servers.
 Swift 6 (strict concurrency), SwiftUI + AppKit track table, streaming-only.
 
 ## Build / test
 
 ```sh
-xcodebuild -project Sonicwave.xcodeproj -scheme Sonicwave \
+xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
   -destination 'platform=macOS' build CODE_SIGNING_ALLOWED=NO   # or: test
 swiftlint   # config in .swiftlint.yml; must pass clean
 ```
 
-- Tests are hermetic (Swift Testing, `SonicwaveTests/`). `LiveDecodeTests`
-  hit a real server only when `SONICWAVE_HOST/USER/PASS` are set.
+- Tests are hermetic (Swift Testing, `HydrophoneTests/`). `LiveDecodeTests`
+  hit a real server only when `HYDROPHONE_HOST/USER/PASS` are set.
 - CI (`.github/workflows/tests.yml`) runs the suite on every push/PR.
 - Baseline: zero compiler warnings, zero SwiftLint violations.
 

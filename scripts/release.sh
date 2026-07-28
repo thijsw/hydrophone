@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sonicwave release pipeline. See docs/07-distribution.md.
+# Hydrophone release pipeline. See docs/07-distribution.md.
 #
 #   scripts/release.sh [developer-id|app-store]     (default: developer-id)
 #
@@ -7,7 +7,7 @@
 #   notarize + staple (when notary credentials are configured) → zip.
 #   One-time notarization setup (needs an app-specific password from
 #   appleid.apple.com, or an App Store Connect API key):
-#     xcrun notarytool store-credentials sonicwave \
+#     xcrun notarytool store-credentials hydrophone \
 #       --apple-id <apple-id> --team-id 4HNWJ993V9
 #
 # app-store — archive → export a signed .pkg for App Store Connect upload.
@@ -17,11 +17,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 METHOD="${1:-developer-id}"
-SCHEME=Sonicwave
+SCHEME=Hydrophone
 BUILD=build
-ARCHIVE="$BUILD/Sonicwave.xcarchive"
+ARCHIVE="$BUILD/Hydrophone.xcarchive"
 EXPORT="$BUILD/export-$METHOD"
-NOTARY_PROFILE=sonicwave
+NOTARY_PROFILE=hydrophone
 
 case "$METHOD" in
   developer-id|app-store) ;;
@@ -30,7 +30,7 @@ esac
 
 echo "==> Archiving (Release)"
 rm -rf "$ARCHIVE" "$EXPORT"
-xcodebuild -project Sonicwave.xcodeproj -scheme "$SCHEME" -configuration Release \
+xcodebuild -project Hydrophone.xcodeproj -scheme "$SCHEME" -configuration Release \
   -destination 'generic/platform=macOS' -archivePath "$ARCHIVE" archive | tail -2
 
 echo "==> Exporting ($METHOD)"
@@ -46,7 +46,7 @@ if [[ "$METHOD" == "app-store" ]]; then
   exit 0
 fi
 
-APP="$EXPORT/Sonicwave.app"
+APP="$EXPORT/Hydrophone.app"
 
 echo "==> Verifying signature"
 codesign --verify --deep --strict --verbose=2 "$APP"
@@ -56,7 +56,7 @@ codesign --display --verbose=2 "$APP" 2>&1 | grep -E 'Authority=Developer ID|fla
 }
 
 VERSION=$(defaults read "$(pwd)/$APP/Contents/Info" CFBundleShortVersionString)
-ZIP="$BUILD/Sonicwave-$VERSION.zip"
+ZIP="$BUILD/Hydrophone-$VERSION.zip"
 
 if xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
   echo "==> Notarizing (profile: $NOTARY_PROFILE)"

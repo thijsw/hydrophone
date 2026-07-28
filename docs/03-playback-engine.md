@@ -176,7 +176,7 @@ stream (a hard restart on the same path as manual skip):
   fallback, return → re-pin) **rebuilds the engine and hard-restarts the
   stream at the playhead** (reusing the seek path) — a sub-second gap,
   reliable on any hardware. Recovery-provoked config-change notifications are
-  swallowed as echoes (1 s guard). Sonicwave never touches the system default;
+  swallowed as echoes (1 s guard). Hydrophone never touches the system default;
   other apps' routing is untouched.
 
 ## Power management ✅

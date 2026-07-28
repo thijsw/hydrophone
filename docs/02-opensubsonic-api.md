@@ -24,7 +24,7 @@ capability-based auto-selection was not needed):
      `u/t/s`. Server support varies — gate on capability detection (below).
 
 Common params on every request: `v` (protocol version we target, e.g.
-`1.16.1`), `c=Sonicwave` (client name), `f=json` (JSON responses).
+`1.16.1`), `c=Hydrophone` (client name), `f=json` (JSON responses).
 
 Credentials live in the **Keychain** (`CredentialStore`; an in-memory variant
 backs tests/previews): server base URL, username, and either password or API

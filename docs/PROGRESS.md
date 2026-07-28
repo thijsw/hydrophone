@@ -9,10 +9,10 @@ milestone first. See `10-roadmap.md` for the full milestone plan.
 ## Environment
 - Xcode 26.3, Swift 6.2.4, macOS 15 SDK. Swift 6 language mode (strict
   concurrency) enabled on all targets.
-- Bundle identifier: `nl.huell.sonicwave`. App Sandbox + `network.client`
+- Bundle identifier: `app.hydrophone`. App Sandbox + `network.client`
   entitlement; Hardened Runtime on.
 - Project uses Xcode 16+ **synchronized file groups**, so new `.swift` files
-  under `Sonicwave/` and `SonicwaveTests/` are picked up automatically without
+  under `Hydrophone/` and `HydrophoneTests/` are picked up automatically without
   editing the project file.
 - **Debug builds sign with the Developer ID identity** (Huell B.V.,
   `4HNWJ993V9`; manual style, hardened runtime off for Debug). Ad-hoc signing
@@ -42,13 +42,36 @@ push; remaining: MAS certificates/app record, final icon, App Privacy)
 
 ## How to build / test
 ```sh
-xcodebuild -project Sonicwave.xcodeproj -scheme Sonicwave \
+xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
   -destination 'platform=macOS' build CODE_SIGNING_ALLOWED=NO
-xcodebuild -project Sonicwave.xcodeproj -scheme Sonicwave \
+xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
   -destination 'platform=macOS' test CODE_SIGNING_ALLOWED=NO
 ```
 
 ---
+
+## Renamed: Sonicwave → Hydrophone (2026-07-28)
+The app is now **Hydrophone** (a device for listening under the surface —
+fitting for a Subsonic client; the old name collided with an Android music
+player and SonicWall's SonicWave hardware line). Full rename, no legacy
+support (pre-rename installs are assumed not to exist — fresh container,
+fresh Keychain item):
+- Bundle identifier `nl.huell.sonicwave` → **`app.hydrophone`** (domain
+  hydrophone.app is registered); tests bundle `app.hydrophoneTests`.
+- Renamed: project/targets/scheme, `Hydrophone/` + `HydrophoneTests/`
+  source dirs, `HydrophoneApp.swift`, `HydrophoneCommands.swift`,
+  `Hydrophone.entitlements`. Keychain service
+  `app.hydrophone.credentials`; Logger subsystems + queue labels
+  `app.hydrophone*`; OpenSubsonic client name `Hydrophone`; live-test env
+  vars `HYDROPHONE_HOST/USER/PASS`; notary profile name `hydrophone`.
+- Website copy + URLs now point at <https://hydrophone.app/> (canonical +
+  og:url added). Docs/README/scripts/CI all renamed.
+- Verified: clean build, SwiftLint 0 violations, full test suite green,
+  app launches as "Hydrophone" with the new bundle ID.
+- ⏳ manual follow-ups: `gh repo rename hydrophone`, Pages custom-domain
+  + DNS for hydrophone.app, re-create the notary keychain profile
+  (`xcrun notarytool store-credentials hydrophone`), MAS app record for
+  `app.hydrophone` when M8 resumes.
 
 ## Queue-first Now Playing panel: collapsible hero (2026-07-26)
 The play queue can now take (nearly) the whole panel. A chevron beside the
@@ -214,7 +237,7 @@ plus 2018–2019 MacBook Air hardware that macOS 15 dropped.
 
 ## Post-v1 roadmap from ecosystem gap analysis (2026-07-18)
 Surveyed ~35 Subsonic/OpenSubsonic clients (Feishin, Supersonic, Symfonium,
-play:Sub, Amperfy, EKO, NaviBeat, …) and mapped Sonicwave against them.
+play:Sub, Amperfy, EKO, NaviBeat, …) and mapped Hydrophone against them.
 Already ahead of the field: `savePlayQueue` cross-device sync (almost
 unclaimed ecosystem-wide), hardware rate matching, streaming gapless.
 Added M9–M11 to `10-roadmap.md`: M9 ratings (`setRating`) + synced lyrics
@@ -291,7 +314,7 @@ changelog updated; the release-triggered Pages deploy stamps 0.3.0.
 ## Issue burn-down: #1 #2 #5 #6 (2026-07-15)
 First four tracker issues closed (from the competitive research round):
 - **#2 — plain-HTTP home servers** (`88eaff3`): partial `Info.plist`
-  (repo root; inside `Sonicwave/` the synced group copies it as a bundle
+  (repo root; inside `Hydrophone/` the synced group copies it as a bundle
   resource → warning) merged into the generated one with
   `NSAllowsLocalNetworking`. Non-local `http://` stays ATS-blocked but now
   maps to an actionable message (`SubsonicError.transport(from:)`).
@@ -318,7 +341,7 @@ First four tracker issues closed (from the competitive research round):
   screenshots cost 5–18s each, which first masqueraded as a "+12s position
   jump"). savePlayQueue→getPlayQueue round-trips through the formPost path
   (Navidrome advertises it). Settings picker persists across relaunches.
-  A `replaygain <gain> for <songId>` info log (nl.huell.sonicwave/playback)
+  A `replaygain <gain> for <songId>` info log (app.hydrophone/playback)
   makes gain application observable; the library's files carry no RG tags,
   so non-unity gain (and audibility) still needs a tagged album — the
   unity no-op path ran clean. NB: zsh shadows `/usr/bin/log` with a
@@ -335,7 +358,7 @@ First four tracker issues closed (from the competitive research round):
   Apple Team ID and author email are the only identifying values and are
   public by design. Claude-design share links stripped from `09`.
 - **Landing page** (`site/`, dark hi-fi look, animated LCD hero) deployed to
-  GitHub Pages: <https://thijsw.github.io/sonicwave/>. `pages.yml` deploys
+  GitHub Pages: <https://hydrophone.app/>. `pages.yml` deploys
   on `site/` pushes **and on every published release**, stamping the latest
   release tag into the page's `app-version` spans — the download front door
   stays current with zero manual steps.
@@ -425,7 +448,7 @@ deferred** (needs a real AirPlay 2 receiver — none available at the time).
 - **Empirical constraint (probed, not assumed):** an AirPlay receiver only
   exists as a Core Audio device *while the system is connected to it* —
   Control Center owns discovery/connection. A shairport-sync fake receiver
-  ("Sonicwave Test Speaker") advertised fine on Bonjour (`_raop._tcp`) but
+  ("Hydrophone Test Speaker") advertised fine on Bonjour (`_raop._tcp`) but
   never appeared in the device list, and *also never appeared in Control
   Center*: the Homebrew build is **AirPlay 1 only**, and macOS's system
   output list shows **AirPlay 2 receivers only** (AirPlay 1 shows in
@@ -476,20 +499,20 @@ blocked on portal artifacts.**
 - `scripts/release.sh [developer-id|app-store]`:
   archive → export (`scripts/ExportOptions-*.plist`) → `codesign
   --verify --strict` + authority/`runtime`-flag assertion → notarize + staple
-  + `spctl` assess (auto-skipped with instructions until a `sonicwave`
+  + `spctl` assess (auto-skipped with instructions until a `hydrophone`
   notarytool keychain profile is stored) → versioned zip. `build/` is
   git-ignored.
-- **Verified:** pipeline run produced `build/Sonicwave-0.1.0.zip`; signature
+- **Verified:** pipeline run produced `build/Hydrophone-0.1.0.zip`; signature
   valid (`Authority=Developer ID Application: Huell B.V.`,
   `flags=0x10000(runtime)`); entitlements on the artifact are exactly
   app-sandbox + network.client; `spctl` reports "Unnotarized Developer ID"
   (expected pre-notarization); the exported app **runs, connects via
   Keychain creds, and plays audio** under the hardened runtime — no runtime
   exceptions needed.
-- ✅ **Notarization round-trip verified (2026-07-07):** with the `sonicwave`
+- ✅ **Notarization round-trip verified (2026-07-07):** with the `hydrophone`
   keychain profile stored, the pipeline notarized (status **Accepted**),
   stapled, and passed Gatekeeper (`accepted, source=Notarized Developer ID`).
-  `build/Sonicwave-0.1.0.zip` is a fully distributable direct-download build.
+  `build/Hydrophone-0.1.0.zip` is a fully distributable direct-download build.
 - Remaining for M8: Apple Distribution + Mac Installer certs and an ASC app
   record for the MAS build, final app icon, App Privacy details, reviewer
   notes/demo server, CI test job.
@@ -539,7 +562,7 @@ the live app under load).
   self-removing in-flight tasks.
 - **Runtime (leaks tool):** after 12 track skips (full decode pipeline
   teardown/rebuild each), seeks, panel toggles, view switching, and repeated
-  context menus: **zero leaks attributable to Sonicwave code**. Footprint is
+  context menus: **zero leaks attributable to Hydrophone code**. Footprint is
   stable and *declines* during playback (47 MB idle → ~118 MB peak → 83 MB
   while still playing) — the bounded read-ahead behaves as designed.
 - **Known framework-internal leak (accepted):** AudioToolbox's
@@ -691,7 +714,7 @@ Status: **complete — multi-device switching + route changes human-verified
     - Settings device picker refreshes live on connect/disconnect, shows a
       "(disconnected)" row (persisted device name) while the choice is absent,
       and filters Core Audio's transient private aggregates.
-    - Sonicwave never touches the system default — other apps' routing is
+    - Hydrophone never touches the system default — other apps' routing is
       fully independent (macOS's own Bluetooth default auto-switch is not
       ours to control).
 
@@ -808,11 +831,11 @@ Navidrome 0.62 (2026-07-03; see "Remaining for M5" below).**
 
 ## M0 — Foundation ✅
 Status: **complete, builds clean.**
-- `Sonicwave.xcodeproj` (app + unit-test targets), synchronized file groups.
-- App Sandbox + `network.client` entitlement (`Sonicwave/Sonicwave.entitlements`),
+- `Hydrophone.xcodeproj` (app + unit-test targets), synchronized file groups.
+- App Sandbox + `network.client` entitlement (`Hydrophone/Hydrophone.entitlements`),
   Hardened Runtime, generated Info.plist (min macOS 15, music category,
-  `nl.huell.sonicwave`).
-- Scenes wired in `App/SonicwaveApp.swift`: `WindowGroup`, `Settings`,
+  `app.hydrophone`).
+- Scenes wired in `App/HydrophoneApp.swift`: `WindowGroup`, `Settings`,
   `MenuBarExtra(.window)`; shared `@Observable` models injected via environment.
 - `App/AppModel.swift` composition root owning services + models.
 - Asset catalog with `AppIcon` (placeholder) + `AccentColor`.
@@ -934,7 +957,7 @@ Status: **UI + data flow working in-memory; SwiftData cache not yet wired.**
   menu, play/enqueue), `ArtworkView` + `Services/ArtworkCache.swift` (NSCache,
   server-resized, in-flight dedup).
 - `UI/NowPlaying/NowPlayingBar.swift`, `UI/MenuBar/MenuBarPanel.swift`,
-  `App/SonicwaveCommands.swift` (Controls menu + shortcuts).
+  `App/HydrophoneCommands.swift` (Controls menu + shortcuts).
 
 ### M2 notes
 - ❌ SwiftData persistence layer — **dropped.** The app is network-required by
@@ -965,7 +988,7 @@ Status: **UI + data flow working in-memory; SwiftData cache not yet wired.**
 
 ### Live verification — 2026-06-22, against Navidrome 0.62.0 (real server)
 Validated the networking + decode path end-to-end (opt-in `LiveDecodeTests`,
-skipped unless `SONICWAVE_HOST/USER/PASS` env vars are set — no secrets committed):
+skipped unless `HYDROPHONE_HOST/USER/PASS` env vars are set — no secrets committed):
 - ✅ **Auth** (token+salt) — `ping` returns ok; password never in the URL.
 - ✅ **Capabilities** — `openSubsonic: true`; extensions include `transcodeOffset`
   (confirms the `timeOffset` seek approach is supported) + `transcoding`.

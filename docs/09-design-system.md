@@ -36,7 +36,7 @@ user likes.
    only if we later maintain a shared design-system project — out of scope for
    v1 unless requested.
 
-> We are **consuming** the design for reference. We are not pushing Sonicwave's
+> We are **consuming** the design for reference. We are not pushing Hydrophone's
 > code into a design-system project.
 
 ## Mapping design cues → native SwiftUI ✅

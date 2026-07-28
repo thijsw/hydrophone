@@ -22,10 +22,10 @@ jobs:
           xcodebuild -version
 
       # CODE_SIGNING_ALLOWED=NO: CI has no signing identities and the tests
-      # don't need any (LiveDecodeTests self-skip without SONICWAVE_* env).
+      # don't need any (LiveDecodeTests self-skip without HYDROPHONE_* env).
       - name: Run unit tests
         run: |
           set -o pipefail
-          xcodebuild -project Sonicwave.xcodeproj -scheme Sonicwave \
+          xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
             -destination 'platform=macOS' test \
             CODE_SIGNING_ALLOWED=NO | tail -100

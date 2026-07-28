@@ -206,7 +206,7 @@ selectable lists; selections are part of restorable view state. Toggleable
 
 ## Menus & keyboard shortcuts ✅ (as implemented)
 
-Menu bar via `Commands` (`SonicwaveCommands`):
+Menu bar via `Commands` (`HydrophoneCommands`):
 
 - **File:** New Playlist… (⌘N, replaces New Window — like Music), routed to
   the sidebar's New Playlist prompt via `AppModel.requestNewPlaylist()`;

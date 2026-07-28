@@ -125,9 +125,9 @@ planned but not yet created). Folder groups inside the app target (Xcode 16+
 synchronized groups — new files are picked up automatically):
 
 ```
-Sonicwave/
-  App/            SonicwaveApp (scenes), AppModel (composition root),
-                  SonicwaveCommands (menu bar)
+Hydrophone/
+  App/            HydrophoneApp (scenes), AppModel (composition root),
+                  HydrophoneCommands (menu bar)
   Models/         PlayerModel (+RemoteCommands, +Scrobbling extensions),
                   LibraryModel, ConnectionModel, PlaybackTypes
   Networking/     Endpoint map, DTOs (SubsonicModels), envelope
@@ -141,7 +141,7 @@ Sonicwave/
     Components/  Library/  MenuBar/  NowPlaying/  Search/  Settings/  Sidebar/
     (+ RootView, Navigator at the top level)
   Resources/      Assets, entitlements
-SonicwaveTests/   Swift Testing units (incl. opt-in live-server tests)
+HydrophoneTests/   Swift Testing units (incl. opt-in live-server tests)
 ```
 
 Keep the audio/Core Audio bridging thin and contained (most is pure Swift; only
