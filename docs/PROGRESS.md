@@ -65,9 +65,13 @@ New visual identity to match the name — "listening under the surface":
 - Verified: build + SwiftLint clean, app launches; site eyeballed
   top-to-bottom in Chrome (hero, cards, spec sheet, install, changelog
   all consistently aqua).
-- ⏳ `site/assets/app-window.png` (also og:image) still shows the
-  red-accent UI — retake the marketing screenshot from a build running
-  the new accent.
+- Marketing screenshot retaken (2026-07-28): `site/assets/app-window.png`
+  now shows the aqua build against the public Navidrome demo server
+  (The Butcher's Ballroom album view, quality badges, Now Playing panel
+  with Up Next). Window capture via `screencapture -o -l` at 1000×760pt
+  (@2x, 2000×1520); alt text updated in site + README. Demo-server
+  playlists (test names) are visible in the sidebar — retake against a
+  curated library if that ever grates.
 
 ## Renamed: Sonicwave → Hydrophone (2026-07-28)
 The app is now **Hydrophone** (a device for listening under the surface —
