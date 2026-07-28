@@ -51,6 +51,12 @@ final class ProgressiveAudioSource: AudioStreamSource {
     /// Frame form of `skipSeconds`, fixed at format discovery.
     private var skipFrames: AVAudioFramePosition = 0
     private var producedFrames: AVAudioFramePosition = 0
+    /// Total frames yielded into `buffers` so far. Updated synchronously by
+    /// `parse(_:)`, so the read-ahead throttle can count decoded audio that
+    /// the consumer hasn't scheduled yet — measuring scheduled frames alone
+    /// let decode race a whole track ahead whenever scheduling lagged the
+    /// parser (see PROGRESS 2026-07-28).
+    private(set) var yieldedFrames: AVAudioFramePosition = 0
     /// Consolidate the many small per-batch decoder outputs into ~1-second
     /// buffers before yielding. Scheduling thousands of tiny buffers in a burst
     /// (a whole track decodes far faster than real time) starves the audio IO
@@ -195,6 +201,7 @@ final class ProgressiveAudioSource: AudioStreamSource {
     }
 
     private func yieldBuffer(_ buffer: AVAudioPCMBuffer) {
+        yieldedFrames += AVAudioFramePosition(buffer.frameLength)
         continuation.yield(SendablePCMBuffer(buffer: buffer))
     }
 

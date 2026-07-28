@@ -73,5 +73,8 @@ struct FlacStreamingTests {
         // Everything (minus at most a trailing converter block) must decode —
         // the corruption bug yielded well under 10% of the file.
         #expect(decoded > expectedFrames - 8_192)
+        // The read-ahead throttle counts on this: every frame the consumer
+        // receives was counted at yield time, synchronously with parse().
+        #expect(source.yieldedFrames == decoded)
     }
 }

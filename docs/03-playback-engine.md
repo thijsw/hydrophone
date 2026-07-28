@@ -123,9 +123,14 @@ Unit-tested against a real AVAudioFile-encoded `.m4a`.
 - Each track occupies a **span** of the node's sample timeline; crossing a
   span boundary emits `.trackChanged(index)`. Queue edits after hand-off are
   reconciled through `PlayerModel`'s `spanPositions` map.
-- **Bounded read-ahead:** scheduling stays between ~8 s and ~15 s ahead of the
-  playhead — beyond that the URLSession transfer is suspended and decoding
-  pauses until playback drains (bounds memory, smooths scheduling).
+- **Bounded read-ahead:** decoded audio stays between ~8 s and ~15 s ahead of
+  the playhead — beyond that the URLSession transfer is suspended and decoding
+  pauses until playback drains (bounds memory, smooths scheduling). The
+  measure counts frames *yielded by the decoder* (scheduled or not), updated
+  synchronously with parsing: counting only scheduled frames let decode race
+  a whole track ahead whenever scheduling lagged the parser, so the transfer
+  was never suspended on fast links and a full track of PCM could pile up
+  (fixed 2026-07-28).
 
 ## Seeking ✅ (transcode-aware)
 

@@ -50,6 +50,41 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Read-ahead cap made honest: count decoded, slice jumbo chunks (2026-07-28)
+The 8–15 s read-ahead cap wasn't holding (spotted during the elegance-pass
+verification): followers pre-buffered *minutes* before a boundary, and a
+whole decoded track (~55 MB of PCM) could pile up in the buffer stream.
+Two causes, two fixes in `Playback/`:
+- **Measure the truth.** The throttle compared *scheduled* frames to the
+  playhead, but audio piles up earlier in the pipeline: decoded PCM queued
+  in `source.buffers` that the consume task hasn't scheduled yet was
+  invisible, and since pump and consume share the actor, the parser could
+  race a whole track ahead while the guard read a stale low number.
+  `ProgressiveAudioSource` now counts `yieldedFrames` (synchronously with
+  `parse`), and `readAheadFrames(including:spanArrayIndex:)` adds the
+  yielded-but-unscheduled delta. Scheduling moves frames between the two
+  terms without changing the sum, so the drain signal's wake condition
+  (playback progress) is unchanged.
+- **Slice jumbo chunks.** URLSession can coalesce deliveries into ~4 MB
+  chunks right after a suspend/resume cycle; parsing one whole blew 130+ s
+  past the cap in a single step, and the resulting minutes-long transfer
+  suspension outlived the demo server's idle timeout — the connection
+  died, the truncated stream masqueraded as decode-complete, and the rest
+  of the track was silently skipped (with an underrun at the seam). Pump
+  now parses in 64 KB slices with the read-ahead check between slices,
+  which also keeps suspend windows at the designed ~7 s.
+- Verified: suite + lint clean; `flacDecodesFullyWhenStreamedInChunks` now
+  also locks `yieldedFrames == frames delivered`. Live vs the demo server
+  (throttle-engage debug log added): 4+ minutes of steady cycles all
+  engaging at 15.0–17.1 s (was: one 145 s spike and unbounded runs),
+  follower pre-buffer starting ≤ ~17 s before the gapless boundary (the
+  logged read-ahead includes the finishing track's tail, so this is
+  measured, not estimated), boundary seamless, zero underruns.
+- Still fragile (pre-existing, now far less likely): a mid-track
+  connection death reads as a clean early stream end and becomes
+  decode-complete → the tail is skipped. A byte/duration sanity check at
+  `decodeComplete` would catch it — future work.
+
 ## Elegance pass: one implementation per idea (2026-07-28)
 Codebase-wide refactor removing duplicated logic (six commits, no feature
 changes). The recurring smell was the same idea hand-written 2–3 times:

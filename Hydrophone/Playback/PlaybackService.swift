@@ -321,7 +321,7 @@ extension PlaybackService {
             }
         }
 
-        await pump(url: url, into: source, gen: gen)
+        await pump(url: url, into: source, spanArrayIndex: spanArrayIndex, gen: gen)
         source.finish()
         _ = await consume.value
         if gen == generation, let message = source.failureMessage {
@@ -334,11 +334,21 @@ extension PlaybackService {
     /// Stream the URL's bytes into the decoder, bounded by the read-ahead
     /// throttle; stops early on cancellation, a newer timeline, or a decoder
     /// that has already declared the stream undecodable.
-    private func pump(url: URL, into source: ProgressiveAudioSource, gen: Int) async {
+    /// Parse at most this many bytes between read-ahead checks. URLSession
+    /// can deliver jumbo coalesced chunks (seen right after a suspend/resume
+    /// cycle: ~4 MB ≈ 2+ minutes of mp3 in one callback); parsing one whole
+    /// would blow far past the read-ahead cap in a single step — and the
+    /// resulting minutes-long transfer suspension outlived the server's idle
+    /// timeout, truncating the track. Slicing keeps the cap honest and the
+    /// suspend windows short (~7 s).
+    private static let parseSliceBytes = 64 * 1024
+
+    private func pump(url: URL, into source: ProgressiveAudioSource,
+                      spanArrayIndex: Int, gen: Int) async {
         let loader = DataStreamLoader()
         var first = true
         do {
-            for try await chunk in loader.stream(from: url) {
+            stream: for try await chunk in loader.stream(from: url) {
                 if first {
                     first = false
                     // What actually came down the wire — the server may ignore
@@ -346,13 +356,20 @@ extension PlaybackService {
                     let magic = chunk.prefix(8).map { String(format: "%02x", $0) }.joined()
                     Self.log.info("stream first bytes: \(magic, privacy: .public)")
                 }
-                if gen != generation || Task.isCancelled { break }
-                await throttleReadAhead(loader: loader, gen: gen)
-                if gen != generation || Task.isCancelled { break }
-                source.parse(chunk)
-                // Undecodable stream (e.g. AAC-in-MP4): no point downloading
-                // the rest; the failure surfaces after finish().
-                if source.failureMessage != nil { break }
+                var start = chunk.startIndex
+                while start < chunk.endIndex {
+                    if gen != generation || Task.isCancelled { break stream }
+                    await throttleReadAhead(loader: loader, source: source,
+                                            spanArrayIndex: spanArrayIndex, gen: gen)
+                    if gen != generation || Task.isCancelled { break stream }
+                    let end = min(start + Self.parseSliceBytes, chunk.endIndex)
+                    source.parse(chunk.subdata(in: start..<end))
+                    start = end
+                    // Undecodable stream (e.g. AAC-in-MP4): no point
+                    // downloading the rest; the failure surfaces after
+                    // finish().
+                    if source.failureMessage != nil { break stream }
+                }
             }
         } catch {
             if gen == generation {
@@ -412,9 +429,19 @@ extension PlaybackService {
     private var maxReadAheadFrames: AVAudioFramePosition { AVAudioFramePosition(canonicalFormat.sampleRate * 15) }
     private var minReadAheadFrames: AVAudioFramePosition { AVAudioFramePosition(canonicalFormat.sampleRate * 8) }
 
-    /// Frames scheduled but not yet played (the buffered look-ahead).
-    private func readAheadFrames() -> AVAudioFramePosition {
-        cumulativeFrames - (currentSampleTime() ?? 0)
+    /// Frames decoded but not yet played (the true buffered look-ahead):
+    /// what's scheduled on the node beyond the playhead, plus what `source`
+    /// has yielded that the consumer hasn't scheduled yet. Counting only the
+    /// scheduled part let decode race a whole track ahead whenever the
+    /// consume task lagged the parser — the throttle guard read a stale low
+    /// number, so `loader.pause()` came too late for TCP back-pressure and
+    /// a full track of PCM could pile up in the buffer stream.
+    private func readAheadFrames(including source: ProgressiveAudioSource,
+                                 spanArrayIndex: Int) -> AVAudioFramePosition {
+        let scheduled = cumulativeFrames - (currentSampleTime() ?? 0)
+        let spanScheduled = spans.indices.contains(spanArrayIndex)
+            ? spans[spanArrayIndex].frameCount : 0
+        return scheduled + (source.yieldedFrames - spanScheduled)
     }
 
 }
@@ -562,12 +589,19 @@ extension PlaybackService {
     /// transfer and decoding until playback drains the buffer to
     /// `minReadAheadFrames`, then resume. Suspending frees the actor so
     /// scheduling, buffer completions, and position ticks keep running.
-    private func throttleReadAhead(loader: DataStreamLoader, gen: Int) async {
-        guard readAheadFrames() >= maxReadAheadFrames else { return }
+    private func throttleReadAhead(loader: DataStreamLoader, source: ProgressiveAudioSource,
+                                   spanArrayIndex: Int, gen: Int) async {
+        let ahead = readAheadFrames(including: source, spanArrayIndex: spanArrayIndex)
+        guard ahead >= maxReadAheadFrames else { return }
+        let seconds = Double(ahead) / canonicalFormat.sampleRate
+        Self.log.debug("read-ahead throttle engaged at \(seconds, format: .fixed(precision: 1), privacy: .public)s")
         loader.pause()
         // A drain signal is a hint, not a guarantee — the loop re-checks its
-        // condition, so a spurious wake just suspends again.
-        while gen == generation, !Task.isCancelled, readAheadFrames() >= minReadAheadFrames {
+        // condition, so a spurious wake just suspends again. Scheduling moves
+        // frames from pending to scheduled without changing the total, so
+        // only playback progress (bufferCompleted) releases the loop.
+        while gen == generation, !Task.isCancelled,
+              readAheadFrames(including: source, spanArrayIndex: spanArrayIndex) >= minReadAheadFrames {
             await withCheckedContinuation { drainSignal = $0 }
         }
         loader.resume()
