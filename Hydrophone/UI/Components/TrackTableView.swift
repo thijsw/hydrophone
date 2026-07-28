@@ -30,8 +30,6 @@ struct TrackTableView: View {
     @Environment(Navigator.self) private var navigator
 
     @State private var selection = Set<Int>()
-    /// Optimistic favorite state so the star reflects taps before the reload.
-    @State private var starOverrides: [Song.ID: Bool] = [:]
     @State private var showNewPlaylist = false
     @State private var newPlaylistName = ""
     @State private var pendingSongIds: [String] = []
@@ -49,20 +47,16 @@ struct TrackTableView: View {
             columns: columns,
             discHeaders: discHeaders,
             nowPlayingID: player.currentTrack?.id,
+            starSignature: library.starSignature,
             selection: $selection,
-            isFavorite: { isStarred($0) },
+            isFavorite: { library.isStarred($0) },
             onPlay: { displayed, index in player.play(tracks: displayed, startAt: index) },
             onPlayNext: { song in player.playNext([song]) },
-            onToggleFavorite: { song in toggleStar([song.id], star: !isStarred(song)) },
+            onToggleFavorite: { song in toggleStar([song.id], star: !library.isStarred(song)) },
             makeMenu: { displayed, indices in buildMenu(displayed, indices) }
         )
         .sheet(item: $infoSong) { song in
             TrackInfoView(song: song)
-        }
-        .onChange(of: tracks) {
-            // A fresh tracks array carries server truth — stale overrides
-            // must not shadow it.
-            starOverrides = [:]
         }
         .alert("New Playlist", isPresented: $showNewPlaylist) {
             TextField("Name", text: $newPlaylistName)
@@ -94,7 +88,7 @@ struct TrackTableView: View {
 
         menu.addItem(addToPlaylistItem(chosen))
 
-        let allStarred = chosen.allSatisfy { isStarred($0) }
+        let allStarred = chosen.allSatisfy { library.isStarred($0) }
         menu.addItem(ClosureMenuItem(title: allStarred ? "Remove from Favorites" : "Add to Favorites") {
             toggleStar(chosen.map(\.id), star: !allStarred)
         })
@@ -177,20 +171,8 @@ struct TrackTableView: View {
         }
     }
 
-    private func isStarred(_ song: Song) -> Bool {
-        starOverrides[song.id] ?? song.isStarred
-    }
-
     private func toggleStar(_ songIds: [String], star: Bool) {
-        for id in songIds { starOverrides[id] = star }
-        Task {
-            let succeeded = await library.setStarred(star, songIds: songIds)
-            if !succeeded {
-                // Roll back the optimistic stars the server refused —
-                // otherwise the wrong state sticks until the view dies.
-                for id in songIds { starOverrides[id] = nil }
-            }
-        }
+        Task { await library.setStarred(star, songIds: songIds) }
     }
 }
 

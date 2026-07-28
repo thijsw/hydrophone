@@ -8,21 +8,9 @@ import SwiftUI
 struct HomeView: View {
     @Environment(LibraryModel.self) private var library
 
-    /// Persisted (not @State): opening an album replaces this whole view in
-    /// the detail column, so scroll must live outside it for Back to land on
-    /// the same spot. Section-level granularity — the shelves are the scroll
-    /// targets; the greeting (top) reads as nil so the top stays the top.
+    /// Section-level scroll memory (see `Binding.scrollID`) — the shelves are
+    /// the scroll targets; the greeting is the top id.
     @AppStorage("homeScrollID") private var storedScrollID = ""
-
-    private var scrollPositionBinding: Binding<String?> {
-        Binding(
-            get: {
-                (storedScrollID.isEmpty || storedScrollID == "greeting")
-                    ? nil : storedScrollID
-            },
-            set: { storedScrollID = $0 ?? "" }
-        )
-    }
 
     private var allEmpty: Bool {
         library.homeNewest.isEmpty && library.homeRecent.isEmpty
@@ -67,7 +55,7 @@ struct HomeView: View {
                     .padding(.vertical, 20)
                     .scrollTargetLayout()
                 }
-                .scrollPosition(id: scrollPositionBinding, anchor: .top)
+                .scrollPosition(id: $storedScrollID.scrollID(topIDs: ["greeting"]), anchor: .top)
             }
         }
         .navigationTitle("Home")

@@ -43,6 +43,9 @@ final class PlayerModel {
 
     var isPlaying: Bool { state == .playing }
 
+    /// Whether the Now Playing panel has anything to show (gates its toggles).
+    var hasNowPlayingContent: Bool { currentTrack != nil || !upNext.isEmpty }
+
     /// Upcoming tracks after the current one (the visible "Up Next").
     var upNext: ArraySlice<Song> {
         guard let index = currentIndex, index + 1 <= queue.count else { return [] }

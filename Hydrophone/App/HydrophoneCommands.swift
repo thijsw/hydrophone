@@ -33,7 +33,7 @@ struct HydrophoneCommands: Commands {
                 set: { newValue in withAnimation { showUpNext = newValue } }
             ))
                 .keyboardShortcut("u", modifiers: .command)
-                .disabled(app.player.currentTrack == nil && app.player.upNext.isEmpty)
+                .disabled(!app.player.hasNowPlayingContent)
             Toggle("Show Column Browser", isOn: $showColumnBrowser)
                 .keyboardShortcut("b", modifiers: [.command, .option])
             Divider()
@@ -65,12 +65,7 @@ struct HydrophoneCommands: Commands {
 
             Button(currentTrackStarred ? "Remove from Favorites" : "Add to Favorites") {
                 guard let track = app.player.currentTrack else { return }
-                Task {
-                    // Make sure the starred list is loaded so the toggle is truthful.
-                    await app.library.loadStarredIfNeeded()
-                    let starred = app.library.starredSongs.contains { $0.id == track.id }
-                    await app.library.setStarred(!starred, songIds: [track.id])
-                }
+                Task { await app.library.toggleStarred(track) }
             }
             .keyboardShortcut("l", modifiers: .command)
             .disabled(app.player.currentTrack == nil || !app.connection.isConnected)
@@ -107,6 +102,6 @@ struct HydrophoneCommands: Commands {
 
     private var currentTrackStarred: Bool {
         guard let track = app.player.currentTrack else { return false }
-        return app.library.starredSongs.contains { $0.id == track.id }
+        return app.library.isStarred(track)
     }
 }

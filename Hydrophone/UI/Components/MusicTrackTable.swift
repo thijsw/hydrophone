@@ -85,6 +85,9 @@ struct MusicTrackTable: NSViewRepresentable {
         }
     }
     var nowPlayingID: String?
+    /// Star state as data (`LibraryModel.starSignature`): `isFavorite` runs
+    /// after body evaluation, invisible to @Observable — this re-renders.
+    var starSignature: Int = 0
     @Binding var selection: Set<Int>          // indices into the *displayed* order
     var isFavorite: (Song) -> Bool
     var onPlay: ([Song], Int) -> Void          // displayed order + start index
@@ -130,6 +133,7 @@ struct MusicTrackTable: NSViewRepresentable {
             sig.append("sort:\(sortKey ?? "")\(ascending)")
             sig.append("np:\(parent.nowPlayingID ?? "")")
             sig.append("discs:" + (parent.discHeadersSignature ?? "off"))
+            sig.append("stars:\(parent.starSignature)")
             sig.append(contentsOf: parent.tracks.map { parent.isFavorite($0) ? "1" : "0" })
             guard sig != signature else { return }
             signature = sig

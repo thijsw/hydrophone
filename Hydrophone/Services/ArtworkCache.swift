@@ -129,8 +129,10 @@ final class ArtworkCache {
         let cacheURL = dir.appendingPathComponent(filename(identity: identity, size: 0))
         var data = try? Data(contentsOf: cacheURL)
         if data == nil {
+            // Same governed path as every other fetch: the concurrency cap
+            // and the one-retry ladder apply to originals too.
             guard let url = try? await client.coverArtURL(id: id),
-                  let (fetched, _) = try? await URLSession.shared.data(from: url) else { return nil }
+                  let (fetched, _) = await fetchWithRetry(url) else { return nil }
             try? fetched.write(to: cacheURL, options: .atomic)
             data = fetched
         }
@@ -173,10 +175,15 @@ final class ArtworkCache {
             return image
         }
         guard let url = try? await client.coverArtURL(id: id, size: size) else { return nil }
+        guard let (data, image) = await fetchWithRetry(url) else { return nil }
+        try? data.write(to: fileURL, options: .atomic)
+        return image
+    }
 
-        // Fetch behind the concurrency cap. One retry: after the server's
-        // Retry-After on a 429, or a short pause on a plain failure — a
-        // transient blip must not leave a gray tile for the whole session.
+    /// Fetch behind the concurrency cap. One retry: after the server's
+    /// Retry-After on a 429, or a short pause on a plain failure — a
+    /// transient blip must not leave a gray tile for the whole session.
+    private nonisolated static func fetchWithRetry(_ url: URL) async -> (Data, NSImage)? {
         var result = await fetchLimiter.run { await fetch(url) }
         switch result {
         case let .rateLimited(delay):
@@ -189,8 +196,7 @@ final class ArtworkCache {
             break
         }
         guard case let .image(data, image) = result else { return nil }
-        try? data.write(to: fileURL, options: .atomic)
-        return image
+        return (data, image)
     }
 
     private enum FetchResult {

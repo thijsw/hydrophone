@@ -10,13 +10,10 @@ struct AlbumDetailView: View {
     @Environment(Navigator.self) private var navigator
     @State private var tracks: [Song] = []
     @State private var discSubtitles: [Int: String] = [:]
-    @State private var starredOverride: Bool?
 
-    // Derive from the library's starred set (source of truth) so the state
-    // persists across revisits; the optimistic override gives instant feedback.
-    private var isStarred: Bool {
-        starredOverride ?? (album.isStarred || library.starredAlbums.contains { $0.id == album.id })
-    }
+    // The library owns star state, optimistic overrides included — the star
+    // here, the table rows, and ⌘L all read the same `isStarred`.
+    private var isStarred: Bool { library.isStarred(album: album) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -66,7 +63,6 @@ struct AlbumDetailView: View {
 
                     Button {
                         let new = !isStarred
-                        starredOverride = new
                         Task { await library.setAlbumStarred(new, albumId: album.id) }
                     } label: {
                         Image(systemName: isStarred ? "star.fill" : "star")

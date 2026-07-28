@@ -181,11 +181,7 @@ struct RootView: View {
         return connection.isConfigured
     }
 
-    /// The Now Playing panel is only relevant while something is playing or
-    /// queued.
-    private var nowPlayingAvailable: Bool {
-        player.currentTrack != nil || !player.upNext.isEmpty
-    }
+    private var nowPlayingAvailable: Bool { player.hasNowPlayingContent }
 
     @ViewBuilder
     private var detail: some View {

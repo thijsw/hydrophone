@@ -140,7 +140,7 @@ struct NowPlayingDisplay: View {
             // flexible LCD all resize in ONE coordinated pass — bare toggles
             // let each layer settle separately, which reads as the whole
             // window jittering (the sidebar most visibly).
-            if player.currentTrack != nil || !player.upNext.isEmpty {
+            if player.hasNowPlayingContent {
                 withAnimation { showUpNext.toggle() }
             }
         }

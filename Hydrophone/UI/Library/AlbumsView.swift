@@ -7,18 +7,10 @@ struct AlbumsView: View {
     @Environment(LibraryModel.self) private var library
     @Environment(Navigator.self) private var navigator
 
-    /// Persisted (not @State): opening an album replaces this whole view in
-    /// the detail column, so the grid's scroll position must live outside
-    /// the view for Back to land on the same spot. Tracks the top-visible
-    /// album id; cleared on filter/sort changes (a new ordering starts at
-    /// the top). A saved id missing after relaunch (deep pagination) is a
-    /// harmless no-op.
+    /// Tracks the top-visible album id (see `Binding.scrollID`); cleared on
+    /// filter/sort changes (a new ordering starts at the top). A saved id
+    /// missing after relaunch (deep pagination) is a harmless no-op.
     @AppStorage("albumsScrollID") private var storedScrollID = ""
-
-    private var scrollPositionBinding: Binding<Album.ID?> {
-        Binding(get: { storedScrollID.isEmpty ? nil : storedScrollID },
-                set: { storedScrollID = $0 ?? "" })
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,7 +57,7 @@ struct AlbumsView: View {
                     ProgressView().padding()
                 }
             }
-            .scrollPosition(id: scrollPositionBinding, anchor: .top)
+            .scrollPosition(id: $storedScrollID.scrollID(), anchor: .top)
         }
         .navigationTitle("Albums")
         .task {
