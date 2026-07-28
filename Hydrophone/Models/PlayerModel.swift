@@ -429,8 +429,9 @@ extension PlayerModel {
     private func updateNowPlayingTrack() {
         nowPlaying?.update(track: currentTrack, state: state, position: position, duration: duration)
         guard let coverArt = currentTrack?.coverArt else { return }
-        Task { [weak self] in
-            let image = await ArtworkCache.shared.image(coverArt: coverArt, size: 600)
+        Task { [weak self, cacheKey = currentTrack?.artworkKey] in
+            let image = await ArtworkCache.shared.image(coverArt: coverArt, cacheKey: cacheKey,
+                                                        size: 600)
             self?.nowPlaying?.updateArtwork(image)
         }
     }

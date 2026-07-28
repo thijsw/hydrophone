@@ -55,7 +55,8 @@ struct AlbumDetailView: View {
         .padding(.top, 10)
 
         HStack(alignment: .top, spacing: 16) {
-            ArtworkView(coverArt: album.coverArt, size: 96, cornerRadius: 8)
+            ArtworkView(coverArt: album.coverArt, cacheKey: album.artworkKey,
+                        size: 96, cornerRadius: 8)
             VStack(alignment: .leading, spacing: 6) {
                 Text(album.name).font(.title2).bold()
                 Text(album.artist ?? "—").foregroundStyle(.secondary)

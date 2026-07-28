@@ -50,6 +50,30 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Artwork: album-keyed cache identity + fetch retry (2026-07-28)
+Fixed redundant cover downloads and the hero's late appearance. Servers
+give every *song* its own `coverArt` id even though all tracks of an album
+resolve to the same image, so the cache (keyed by raw id) downloaded the
+identical cover once per queue row and missed the album page's copy when
+the Now Playing hero asked for it.
+- `ArtworkCache` now separates **cache identity** from the fetch id:
+  song/album surfaces share `artworkKey` (`album:<albumId>`, falling back
+  to the song's own id when album-less) across the album grid/page, hero,
+  compact strip, queue rows, LCD, menu bar and MPNowPlaying. A queue of
+  one album costs a single 160px download; the hero seeds instantly from
+  whatever variant the album page already loaded. Trade-off (documented
+  in `05`): per-track embedded art that differs from the album cover is
+  not shown — the album cover wins.
+- Reliability: network fetches now get one retry on *any* failure (short
+  pause), not just on 429 — a transient blip no longer leaves a gray tile
+  for the whole session.
+- Live-verified vs the demo server, cold cache: full Albums grid loads
+  with zero gray tiles; playing a fresh 15-track album showed hero + all
+  queue thumbnails instantly (screenshot at 0:02) and added no per-row
+  cache files (was: one identical file per row; the same session dropped
+  from 108 cached files to 72 while covering *more* albums). Build, full
+  suite, SwiftLint clean; `artworkKeyCollapsesSongsOntoTheirAlbum` added.
+
 ## Hydrophone rebrand: icon, accent, site theme (2026-07-28)
 New visual identity to match the name — "listening under the surface":
 - **App icon**: waveform bars hanging below a water-surface line, white on

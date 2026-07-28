@@ -104,6 +104,19 @@ struct DiscTitle: Codable, Sendable, Hashable {
     var title: String?
 }
 
+/// Artwork cache identity (see ArtworkCache). Servers give every song its own
+/// `coverArt` id even though all tracks of an album resolve to the same image,
+/// so song and album surfaces share an album-scoped key: showing or playing a
+/// track reuses art the album grid/page already fetched, and a queue of one
+/// album costs a single download instead of one per row.
+extension Song {
+    var artworkKey: String? { albumId.map { "album:\($0)" } ?? coverArt }
+}
+
+extension Album {
+    var artworkKey: String { "album:\(id)" }
+}
+
 struct Artist: Identifiable, Codable, Sendable, Hashable {
     let id: String
     var name: String

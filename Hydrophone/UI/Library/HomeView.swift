@@ -114,7 +114,8 @@ private struct HomeHeroCard: View {
 
     var body: some View {
         HStack(spacing: 22) {
-            ArtworkView(coverArt: album.coverArt, size: 150, cornerRadius: 8)
+            ArtworkView(coverArt: album.coverArt, cacheKey: album.artworkKey,
+                        size: 150, cornerRadius: 8)
                 .shadow(color: .black.opacity(0.5), radius: 10, y: 4)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Jump back in")
@@ -146,7 +147,8 @@ private struct HomeHeroCard: View {
             // The album's own art, blown up and blurred, carries the card's
             // color; the scrim keeps the white text readable on any cover.
             ZStack {
-                ArtworkView(coverArt: album.coverArt, size: 700, cornerRadius: 0)
+                ArtworkView(coverArt: album.coverArt, cacheKey: album.artworkKey,
+                            size: 700, cornerRadius: 0)
                     .blur(radius: 60)
                     .saturation(1.3)
                 Rectangle().fill(.black.opacity(hovering ? 0.28 : 0.38))

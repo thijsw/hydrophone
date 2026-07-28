@@ -7,6 +7,7 @@ import SwiftUI
 /// a title-length-dependent amount.
 struct AlbumGridCell: View {
     let coverArt: String?
+    var cacheKey: String?
     let title: String
     var subtitle: String?
 
@@ -17,7 +18,8 @@ struct AlbumGridCell: View {
             // Covers lift slightly on hover (the design's cue that they're
             // clickable), with a deeper shadow selling the elevation.
             GeometryReader { geo in
-                ArtworkView(coverArt: coverArt, size: geo.size.width, cornerRadius: 8)
+                ArtworkView(coverArt: coverArt, cacheKey: cacheKey,
+                            size: geo.size.width, cornerRadius: 8)
             }
             .aspectRatio(1, contentMode: .fit)
             .shadow(color: .black.opacity(hovering ? 0.45 : 0.25),

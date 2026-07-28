@@ -13,16 +13,28 @@ metadata persistence (streaming-only, network-required).
 
 ## Artwork cache (implemented)
 
-`Services/ArtworkCache.swift` is a two-tier cache keyed by `coverArt id + pixel
-size`:
-- **In-memory** `NSCache` (count-bounded) for the hot path, plus a per-id size
-  index so a different-size request can show an already-loaded variant instantly
-  (no placeholder flash).
+`Services/ArtworkCache.swift` is a two-tier cache keyed by `cache identity +
+pixel size`:
+- **Identity ≠ fetch id.** Servers give every *song* its own `coverArt` id
+  even though all tracks of an album resolve to the album's image, so keying
+  by raw id would download the identical cover once per queue row and miss
+  the album page's copy when the hero shows it. Song and album surfaces
+  therefore share an album-scoped identity (`Song.artworkKey` /
+  `Album.artworkKey`, i.e. `album:<albumId>`; songs without an album fall
+  back to their own id) while the fetch URL still uses the raw `coverArt`
+  id. One trade-off: per-track embedded art that differs from the album
+  cover is not shown (the album cover wins) — never fetch a cover that the
+  album identity already has. Artist/playlist ids are their own identity.
+- **In-memory** `NSCache` (count-bounded) for the hot path, plus a per-identity
+  size index so a different-size request can show an already-loaded variant
+  instantly (no placeholder flash).
 - **On-disk** store under `Caches/<bundleId>/Artwork`, filenames are the SHA-256
   of the key; the original downloaded bytes (webp/jpeg) are written as-is.
   Because cover art is immutable, a disk hit is authoritative and kept
   indefinitely — artwork loads instantly across launches and survives network
-  blips. Disk + network I/O run off the main actor.
+  blips. Disk + network I/O run off the main actor. Network fetches get one
+  retry: after `Retry-After` on a 429, or a short pause on any other failure,
+  so a transient blip doesn't leave a gray tile for the session.
 - **Scoped per server.** Both tiers are namespaced by a hash of the server's
   base URL (disk: a per-server subdirectory; memory: a key prefix). A different
   Navidrome server can reuse the same coverArt id for a different album, so

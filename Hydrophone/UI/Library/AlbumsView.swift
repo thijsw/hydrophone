@@ -47,6 +47,7 @@ struct AlbumsView: View {
                     ForEach(library.albums) { album in
                         Button { navigator.openAlbum(album) } label: {
                             AlbumGridCell(coverArt: album.coverArt,
+                                          cacheKey: album.artworkKey,
                                           title: album.name,
                                           subtitle: album.artist ?? "—")
                         }

@@ -167,13 +167,14 @@ private struct CurrentTrackCard: View {
             // Hero artwork, full-bleed: flush with the panel edges and the
             // toolbar above, filling all available width. Click for the
             // full-resolution cover in Quick Look.
-            HeroArtwork(coverArt: song.coverArt)
+            HeroArtwork(coverArt: song.coverArt, cacheKey: song.artworkKey)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     guard quickLookArmed else { return }
                     Task {
                         artworkPreviewURL = await ArtworkCache.shared.originalImageFileURL(
                             coverArt: song.coverArt,
+                            cacheKey: song.artworkKey,
                             displayName: song.album ?? song.title)
                     }
                 }
@@ -253,10 +254,12 @@ private struct CurrentTrackCard: View {
 /// corner rounding, border or shadow.
 private struct HeroArtwork: View {
     let coverArt: String?
+    var cacheKey: String?
 
     var body: some View {
         GeometryReader { geo in
-            ArtworkView(coverArt: coverArt, size: geo.size.width, cornerRadius: 0)
+            ArtworkView(coverArt: coverArt, cacheKey: cacheKey,
+                        size: geo.size.width, cornerRadius: 0)
         }
         .aspectRatio(1, contentMode: .fit)
     }
@@ -273,7 +276,8 @@ private struct CompactTrackStrip: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ArtworkView(coverArt: song.coverArt, size: 36, cornerRadius: 6)
+            ArtworkView(coverArt: song.coverArt, cacheKey: song.artworkKey,
+                        size: 36, cornerRadius: 6)
             VStack(alignment: .leading, spacing: 1) {
                 Text(song.title)
                     .font(.body.weight(.medium)).lineLimit(1)
@@ -311,7 +315,8 @@ private struct QueueRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Button(action: onPlay) {
-                ArtworkView(coverArt: song.coverArt, size: 36, cornerRadius: 6)
+                ArtworkView(coverArt: song.coverArt, cacheKey: song.artworkKey,
+                            size: 36, cornerRadius: 6)
                     .overlay {
                         if hovering {
                             RoundedRectangle(cornerRadius: 6)

@@ -16,6 +16,27 @@ struct ArtworkCacheTests {
         #expect(ArtworkCache.shared.clientBox != nil)
     }
 
+    /// Songs of one album must share a cache identity (servers hand each song
+    /// its own coverArt id for the same image), and that identity must match
+    /// the album's — so the album page, hero and queue all reuse one download.
+    @Test func artworkKeyCollapsesSongsOntoTheirAlbum() {
+        var song = Song(id: "s1", title: "One")
+        song.albumId = "al9"
+        song.coverArt = "mf-s1_cafe"
+        var sibling = Song(id: "s2", title: "Two")
+        sibling.albumId = "al9"
+        sibling.coverArt = "mf-s2_beef"
+        let album = Album(id: "al9", name: "The Album")
+
+        #expect(song.artworkKey == sibling.artworkKey)
+        #expect(song.artworkKey == album.artworkKey)
+
+        // No album to key by → fall back to the song's own coverArt id.
+        var single = Song(id: "s3", title: "Loose")
+        single.coverArt = "mf-s3_f00d"
+        #expect(single.artworkKey == "mf-s3_f00d")
+    }
+
     @Test func retryDelayParsesAndClampsRetryAfter() {
         func response(_ headers: [String: String]) -> HTTPURLResponse {
             HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 429,

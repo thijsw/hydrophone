@@ -5,8 +5,13 @@ import CryptoKit
 /// Two-tier artwork cache: an in-memory `NSCache` over a persistent on-disk
 /// store. Cover art is immutable, so a disk hit is authoritative and kept
 /// indefinitely — artwork loads instantly across launches and survives network
-/// blips. Keyed by coverArt id + target pixel size (list thumbnails and the
-/// now-playing hero are separate, right-sized entries).
+/// blips. Keyed by a caller-supplied cache identity + target pixel size (list
+/// thumbnails and the now-playing hero are separate, right-sized entries).
+///
+/// The cache identity (`cacheKey`) is decoupled from the `coverArt` id used to
+/// build the fetch URL: servers hand every *song* its own coverArt id even
+/// though all tracks of an album resolve to the same image, so song surfaces
+/// key by album (`Song.artworkKey`) and a whole queue costs one download.
 ///
 /// Everything is **scoped to the current server** (a hash of its base URL): a
 /// different Navidrome server can reuse the same coverArt id for a different
@@ -34,8 +39,9 @@ final class ArtworkCache {
 
     /// Network fetches only (disk hits bypass): Navidrome rate-limits cover
     /// art by default, and a Home page + grid can otherwise fire dozens of
-    /// simultaneous getCoverArt calls. See issue #4.
-    private let fetchLimiter = AsyncLimiter(limit: 6)
+    /// simultaneous getCoverArt calls. Static so the nonisolated loaders can
+    /// share it directly (the cache is a singleton). See issue #4.
+    private static let fetchLimiter = AsyncLimiter(limit: 6)
 
     init() {
         cache.countLimit = 400
@@ -59,22 +65,25 @@ final class ArtworkCache {
         inFlight.removeAll()
     }
 
-    func image(coverArt id: String?, size: Int) async -> NSImage? {
+    /// `cacheKey` is the cache identity (defaults to the coverArt id); `id`
+    /// only feeds the fetch URL. Passing the same key for different coverArt
+    /// ids (all songs of one album) makes them share entries and downloads.
+    func image(coverArt id: String?, cacheKey: String? = nil, size: Int) async -> NSImage? {
         guard let id, !id.isEmpty, let clientBox else { return nil }
-        let key = "\(serverID)|\(id)@\(size)"
+        let identity = cacheKey ?? id
+        let key = "\(serverID)|\(identity)@\(size)"
         if let cached = cache.object(forKey: key as NSString) { return cached }
         if let existing = inFlight[key] { return await existing.value }
 
         let client = clientBox.client
         let dir = serverDir()
-        let limiter = fetchLimiter
         let task = Task<NSImage?, Never> { [weak self] in
-            let image = await Self.load(id: id, size: size, client: client, dir: dir,
-                                        limiter: limiter)
+            let image = await Self.load(id: id, identity: identity, size: size,
+                                        client: client, dir: dir)
             if let self, let image {
                 self.cache.setObject(image, forKey: key as NSString)
-                if !(self.sizesByID[id]?.contains(size) ?? false) {
-                    self.sizesByID[id, default: []].append(size)
+                if !(self.sizesByID[identity]?.contains(size) ?? false) {
+                    self.sizesByID[identity, default: []].append(size)
                 }
             }
             self?.inFlight[key] = nil
@@ -84,13 +93,15 @@ final class ArtworkCache {
         return await task.value
     }
 
-    /// Any in-memory variant for `id` (largest available), used as an instant
-    /// placeholder while the exact size loads — so showing the same art at a
-    /// different size doesn't flash the empty placeholder.
-    func cachedVariant(coverArt id: String?) -> NSImage? {
-        guard let id, let sizes = sizesByID[id] else { return nil }
+    /// Any in-memory variant for the cache identity (largest available), used
+    /// as an instant placeholder while the exact size loads — so showing the
+    /// same art at a different size doesn't flash the empty placeholder.
+    func cachedVariant(key identity: String?) -> NSImage? {
+        guard let identity, let sizes = sizesByID[identity] else { return nil }
         for size in sizes.sorted(by: >) {
-            if let image = cache.object(forKey: "\(serverID)|\(id)@\(size)" as NSString) { return image }
+            if let image = cache.object(forKey: "\(serverID)|\(identity)@\(size)" as NSString) {
+                return image
+            }
         }
         return nil
     }
@@ -104,15 +115,18 @@ final class ArtworkCache {
     /// The original-size artwork, staged as a nicely-named image file for
     /// Quick Look (the panel titles itself with the filename). The original
     /// bytes are disk-cached like any other size (keyed size 0).
-    func originalImageFileURL(coverArt id: String?, displayName: String) async -> URL? {
+    func originalImageFileURL(coverArt id: String?, cacheKey: String? = nil,
+                              displayName: String) async -> URL? {
         guard let id, !id.isEmpty, let clientBox else { return nil }
-        return await Self.stageOriginal(id: id, displayName: displayName,
+        return await Self.stageOriginal(id: id, identity: cacheKey ?? id,
+                                        displayName: displayName,
                                         client: clientBox.client, dir: serverDir())
     }
 
-    private nonisolated static func stageOriginal(id: String, displayName: String,
+    private nonisolated static func stageOriginal(id: String, identity: String,
+                                                  displayName: String,
                                                   client: SubsonicClient, dir: URL) async -> URL? {
-        let cacheURL = dir.appendingPathComponent(filename(id: id, size: 0))
+        let cacheURL = dir.appendingPathComponent(filename(identity: identity, size: 0))
         var data = try? Data(contentsOf: cacheURL)
         if data == nil {
             guard let url = try? await client.coverArtURL(id: id),
@@ -150,10 +164,9 @@ final class ArtworkCache {
         return dir
     }
 
-    private nonisolated static func load(id: String, size: Int,
-                                         client: SubsonicClient, dir: URL,
-                                         limiter: AsyncLimiter) async -> NSImage? {
-        let fileURL = dir.appendingPathComponent(filename(id: id, size: size))
+    private nonisolated static func load(id: String, identity: String, size: Int,
+                                         client: SubsonicClient, dir: URL) async -> NSImage? {
+        let fileURL = dir.appendingPathComponent(filename(identity: identity, size: size))
         // Disk first: cover art doesn't change, so a hit is authoritative
         // (and never waits on the network limiter).
         if let data = try? Data(contentsOf: fileURL), let image = NSImage(data: data) {
@@ -161,12 +174,19 @@ final class ArtworkCache {
         }
         guard let url = try? await client.coverArtURL(id: id, size: size) else { return nil }
 
-        // Fetch behind the concurrency cap; a rate-limited response gets one
-        // retry after the server's Retry-After (or a 2s default).
-        var result = await limiter.run { await fetch(url) }
-        if case let .rateLimited(delay) = result {
+        // Fetch behind the concurrency cap. One retry: after the server's
+        // Retry-After on a 429, or a short pause on a plain failure — a
+        // transient blip must not leave a gray tile for the whole session.
+        var result = await fetchLimiter.run { await fetch(url) }
+        switch result {
+        case let .rateLimited(delay):
             try? await Task.sleep(for: .seconds(delay))
-            result = await limiter.run { await fetch(url) }
+            result = await fetchLimiter.run { await fetch(url) }
+        case .failed:
+            try? await Task.sleep(for: .seconds(1.5))
+            result = await fetchLimiter.run { await fetch(url) }
+        case .image:
+            break
         }
         guard case let .image(data, image) = result else { return nil }
         try? data.write(to: fileURL, options: .atomic)
@@ -199,8 +219,8 @@ final class ArtworkCache {
         return min(seconds, 30)
     }
 
-    private nonisolated static func filename(id: String, size: Int) -> String {
-        sha(of: "\(id)@\(size)") + ".img"
+    private nonisolated static func filename(identity: String, size: Int) -> String {
+        sha(of: "\(identity)@\(size)") + ".img"
     }
 
     private nonisolated static func scope(for url: URL) -> String {

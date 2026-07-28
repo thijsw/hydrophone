@@ -76,6 +76,7 @@ struct NowPlayingDisplay: View {
     var body: some View {
         HStack(spacing: 11) {
             ArtworkView(coverArt: player.currentTrack?.coverArt,
+                        cacheKey: player.currentTrack?.artworkKey,
                         size: LCD.artworkSize, cornerRadius: LCD.artworkRadius)
                 .shadow(color: .black.opacity(0.4), radius: 1.5, y: 1)
 

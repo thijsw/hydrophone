@@ -116,6 +116,7 @@ struct ArtistDetailView: View {
                     ForEach(albums) { album in
                         Button { navigator.openAlbum(album) } label: {
                             AlbumGridCell(coverArt: album.coverArt,
+                                          cacheKey: album.artworkKey,
                                           title: album.name,
                                           subtitle: album.year.map(String.init))
                         }

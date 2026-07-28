@@ -5,6 +5,9 @@ import SwiftUI
 /// See docs/05-data-and-caching.md.
 struct ArtworkView: View {
     let coverArt: String?
+    /// Cache identity — pass `song.artworkKey`/`album.artworkKey` so all
+    /// surfaces showing one album's art share entries (defaults to the id).
+    var cacheKey: String?
     var size: CGFloat
     var cornerRadius: CGFloat = 6
     /// SF Symbol shown while there is no artwork (branding surfaces pass the
@@ -13,15 +16,16 @@ struct ArtworkView: View {
 
     @State private var image: NSImage?
 
-    init(coverArt: String?, size: CGFloat, cornerRadius: CGFloat = 6,
+    init(coverArt: String?, cacheKey: String? = nil, size: CGFloat, cornerRadius: CGFloat = 6,
          placeholderSymbol: String = "music.note") {
         self.coverArt = coverArt
+        self.cacheKey = cacheKey
         self.size = size
         self.cornerRadius = cornerRadius
         self.placeholderSymbol = placeholderSymbol
         // Seed from any already-cached variant so cached art shows immediately
         // (no placeholder flash when the same art is shown at a different size).
-        _image = State(initialValue: ArtworkCache.shared.cachedVariant(coverArt: coverArt))
+        _image = State(initialValue: ArtworkCache.shared.cachedVariant(key: cacheKey ?? coverArt))
     }
 
     /// Requested pixel size: displayed points × screen scale, rounded up to a
@@ -54,11 +58,13 @@ struct ArtworkView: View {
         // Keyed on the fetch size as well as the id: views measured by
         // GeometryReader (the Now Playing hero) first render at a placeholder
         // size, and the fetch must re-run once the real width is known.
-        .task(id: "\(coverArt ?? "")-\(fetchPixels)") {
-            // Show a cached variant for this id at once, then upgrade to the
+        .task(id: "\(cacheKey ?? coverArt ?? "")-\(fetchPixels)") {
+            // Show a cached variant for this identity at once (nil here clears
+            // stale art when the identity changes), then upgrade to the
             // fetched size (keep the variant if the fetch fails).
-            image = ArtworkCache.shared.cachedVariant(coverArt: coverArt)
-            if let exact = await ArtworkCache.shared.image(coverArt: coverArt, size: fetchPixels) {
+            image = ArtworkCache.shared.cachedVariant(key: cacheKey ?? coverArt)
+            if let exact = await ArtworkCache.shared.image(coverArt: coverArt, cacheKey: cacheKey,
+                                                           size: fetchPixels) {
                 image = exact
             }
         }

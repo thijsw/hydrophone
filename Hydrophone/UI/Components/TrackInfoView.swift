@@ -10,7 +10,8 @@ struct TrackInfoView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 14) {
-                ArtworkView(coverArt: song.coverArt, size: 88, cornerRadius: 8)
+                ArtworkView(coverArt: song.coverArt, cacheKey: song.artworkKey,
+                            size: 88, cornerRadius: 8)
                     .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(song.title)

@@ -39,7 +39,8 @@ struct AlbumShelf: View {
             ForEach(albums) { album in
                 Button { navigator.openAlbum(album) } label: {
                     VStack(alignment: .leading, spacing: 4) {
-                        ArtworkView(coverArt: album.coverArt, size: tileSize, cornerRadius: 8)
+                        ArtworkView(coverArt: album.coverArt, cacheKey: album.artworkKey,
+                                    size: tileSize, cornerRadius: 8)
                         Text(album.name).font(.caption).lineLimit(1)
                         Text(album.artist ?? "—").font(.caption2)
                             .foregroundStyle(.secondary).lineLimit(1)
