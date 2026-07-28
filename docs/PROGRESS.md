@@ -50,6 +50,25 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Hydrophone rebrand: icon, accent, site theme (2026-07-28)
+New visual identity to match the name — "listening under the surface":
+- **App icon**: waveform bars hanging below a water-surface line, white on
+  an ocean-blue gradient (#41C6F2 → #0A4E86), standard macOS plate
+  (824pt rounded rect, 1024 canvas). Rendered dependency-free by a
+  CoreGraphics script (scratchpad `make_icon.swift`) at 16–1024px into
+  `AppIcon.appiconset`; legible at 16px.
+- **AccentColor**: red → ocean aqua (P3; light #1287CC-ish, dark
+  #41C6F2-ish). MenuBarExtra symbol `waveform` → `water.waves`.
+- **Site**: CSS vars renamed `--red`/`--red-deep` → `--accent`/
+  `--accent-deep` with aqua values; all `rgba(255,69,58,…)` glows/shadows
+  recolored; favicon + header wordmark redrawn to the new mark.
+- Verified: build + SwiftLint clean, app launches; site eyeballed
+  top-to-bottom in Chrome (hero, cards, spec sheet, install, changelog
+  all consistently aqua).
+- ⏳ `site/assets/app-window.png` (also og:image) still shows the
+  red-accent UI — retake the marketing screenshot from a build running
+  the new accent.
+
 ## Renamed: Sonicwave → Hydrophone (2026-07-28)
 The app is now **Hydrophone** (a device for listening under the surface —
 fitting for a Subsonic client; the old name collided with an Android music

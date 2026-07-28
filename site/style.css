@@ -7,8 +7,8 @@
   --line: rgba(255, 255, 255, 0.09);
   --text: #ece9e3;
   --muted: #9b988f;
-  --red: #ff453a;
-  --red-deep: #c92a22;
+  --accent: #41c6f2;
+  --accent-deep: #1287cc;
   --display: "Bricolage Grotesque", "Archivo", sans-serif;
   --body: "Archivo", -apple-system, sans-serif;
   --lcd-font: "Doto", monospace;
@@ -47,11 +47,11 @@ body::after {
   height: 700px;
   transform: translateX(-50%);
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(255, 69, 58, 0.13), transparent 62%);
+  background: radial-gradient(ellipse at center, rgba(65, 198, 242, 0.13), transparent 62%);
 }
 
 a { color: inherit; }
-::selection { background: var(--red); color: #fff; }
+::selection { background: var(--accent); color: #fff; }
 
 kbd {
   font-family: var(--body);
@@ -166,9 +166,9 @@ code {
 }
 
 .lcd-note {
-  color: var(--red);
+  color: var(--accent);
   font-size: 1.3rem;
-  text-shadow: 0 0 12px rgba(255, 69, 58, 0.8);
+  text-shadow: 0 0 12px rgba(65, 198, 242, 0.8);
   animation: pulse 2.4s ease-in-out infinite;
 }
 
@@ -208,8 +208,8 @@ code {
 
 .lcd-time {
   font-size: 0.85rem;
-  color: var(--red);
-  text-shadow: 0 0 10px rgba(255, 69, 58, 0.6);
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(65, 198, 242, 0.6);
   font-variant-numeric: tabular-nums;
 }
 
@@ -226,8 +226,8 @@ code {
   height: 100%;
   width: 43%;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--red-deep), var(--red));
-  box-shadow: 0 0 8px rgba(255, 69, 58, 0.7);
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent));
+  box-shadow: 0 0 8px rgba(65, 198, 242, 0.7);
   transition: width 1s linear;
 }
 
@@ -236,7 +236,7 @@ code {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--red);
+  color: var(--accent);
   margin-bottom: 1.2rem;
 }
 
@@ -253,7 +253,7 @@ h1 {
 h1 em {
   font-style: normal;
   font-weight: 500;
-  color: var(--red);
+  color: var(--accent);
 }
 
 .lede {
@@ -287,13 +287,13 @@ h1 em {
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, #ff5c52, var(--red-deep));
+  background: linear-gradient(180deg, #63d4f7, var(--accent-deep));
   color: #fff;
-  box-shadow: 0 6px 22px rgba(255, 69, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 22px rgba(65, 198, 242, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 30px rgba(255, 69, 58, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 10px 30px rgba(65, 198, 242, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn-ghost {
@@ -325,7 +325,7 @@ h1 em {
   box-shadow:
     0 40px 90px rgba(0, 0, 0, 0.65),
     0 12px 30px rgba(0, 0, 0, 0.5),
-    0 0 120px rgba(255, 69, 58, 0.07);
+    0 0 120px rgba(65, 198, 242, 0.07);
   animation: shot-rise 1.1s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -356,7 +356,7 @@ h1 em {
   font-family: var(--lcd-font);
   font-weight: 700;
   font-size: 0.95rem;
-  color: var(--red);
+  color: var(--accent);
 }
 
 h2 {
@@ -415,7 +415,7 @@ h2 {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--red);
+  color: var(--accent);
 }
 
 .spec dd { color: var(--text); font-size: 0.97rem; }
@@ -439,8 +439,8 @@ h2 {
   font-family: var(--lcd-font);
   font-weight: 700;
   font-size: 1.9rem;
-  color: var(--red);
-  text-shadow: 0 0 14px rgba(255, 69, 58, 0.45);
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(65, 198, 242, 0.45);
   margin-bottom: 0.7rem;
 }
 
@@ -472,8 +472,8 @@ h2 {
   font-family: var(--lcd-font);
   font-weight: 700;
   font-size: 1.5rem;
-  color: var(--red);
-  text-shadow: 0 0 14px rgba(255, 69, 58, 0.4);
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(65, 198, 242, 0.4);
 }
 
 .release time { font-size: 0.85rem; color: var(--muted); }
@@ -483,8 +483,8 @@ h2 {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--red);
-  border: 1px solid rgba(255, 69, 58, 0.4);
+  color: var(--accent);
+  border: 1px solid rgba(65, 198, 242, 0.4);
   border-radius: 99px;
   padding: 0.14rem 0.6rem;
 }
@@ -505,7 +505,7 @@ h2 {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--red-deep);
+  background: var(--accent-deep);
 }
 .release li strong { color: var(--text); font-weight: 600; }
 

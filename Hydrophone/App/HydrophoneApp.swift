@@ -31,8 +31,8 @@ struct HydrophoneApp: App {
                 .environment(app.connection)
         }
 
-        // The waveform mirrors the app icon's glyph.
-        MenuBarExtra("Hydrophone", systemImage: "waveform") {
+        // Water waves echo the app icon's under-the-surface glyph.
+        MenuBarExtra("Hydrophone", systemImage: "water.waves") {
             MenuBarPanel()
                 .environment(app)
                 .environment(app.player)
