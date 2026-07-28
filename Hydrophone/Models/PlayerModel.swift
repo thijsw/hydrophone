@@ -96,7 +96,7 @@ final class PlayerModel {
         duration = TimeInterval(tracks[index].duration ?? 0)
         position = max(0, min(restored, duration))
         resumePosition = position
-        updateNowPlayingTrack()
+        publishNowPlaying(refreshArtwork: true)
     }
 
     // MARK: - Start / enqueue
@@ -146,10 +146,7 @@ final class PlayerModel {
 
     /// Jump to and play a specific queue index (hard start).
     func playFromQueue(at index: Int) {
-        guard queue.indices.contains(index) else { return }
-        setCurrent(index)
-        state = .playing
-        startCurrent()
+        advanceManual(to: index)
     }
 
     /// Move queue items (SwiftUI `onMove`), keeping the current track tracked.
@@ -224,7 +221,7 @@ extension PlayerModel {
         case .buffering:
             break
         }
-        syncNowPlayingState()
+        publishNowPlaying()
     }
 
     func next() {
@@ -268,6 +265,9 @@ extension PlayerModel {
 
     // MARK: - Internal transitions
 
+    /// The single "this queue entry becomes the current track" transition,
+    /// shared by manual starts and gapless advances. Now Playing publication
+    /// is left to callers — the two paths publish at different points.
     private func setCurrent(_ index: Int) {
         guard queue.indices.contains(index) else { return }
         currentIndex = index
@@ -286,18 +286,26 @@ extension PlayerModel {
         startCurrent()
     }
 
+    /// Engine-facing decode parameters for a queue entry, derived the same
+    /// way for hard starts and gapless pre-buffering.
+    private struct TrackHandoff: Sendable {
+        let id: String, suffix: String?, duration: TimeInterval, gain: Float
+    }
+
+    private func handoff(for song: Song) -> TrackHandoff {
+        .init(id: song.id, suffix: song.suffix,
+              duration: TimeInterval(song.duration ?? 0), gain: replayGain(for: song))
+    }
+
     private func startCurrent(from time: TimeInterval = 0) {
         // A hard start resets the engine's timeline; only the current entry
         // is handed over.
         spanPositions = currentIndex.map { [$0: $0] } ?? [:]
         guard let track = currentTrack, let index = currentIndex else { return }
-        updateNowPlayingTrack()
-        let id = track.id
-        let suffix = track.suffix
-        let dur = TimeInterval(track.duration ?? 0)
-        let gain = replayGain(for: track)
-        forward { await $0.play(songId: id, suffix: suffix, duration: dur, index: index,
-                                from: time, gain: gain) }
+        publishNowPlaying(refreshArtwork: true)
+        let args = handoff(for: track)
+        forward { await $0.play(songId: args.id, suffix: args.suffix, duration: args.duration,
+                                index: index, from: time, gain: args.gain) }
     }
 
     private func clearPlayback() {
@@ -308,7 +316,7 @@ extension PlayerModel {
         position = 0
         duration = 0
         forward { await $0.stop() }
-        nowPlaying?.update(track: nil, state: .stopped, position: 0, duration: 0)
+        publishNowPlaying()
     }
 
     /// Successor for automatic (gapless) advance — honors repeat-one (loop).
@@ -358,7 +366,7 @@ extension PlayerModel {
         switch event {
         case let .stateChanged(newState):
             state = newState
-            syncNowPlayingState()
+            publishNowPlaying()
         case let .position(time, dur):
             position = time
             if dur > 0 { duration = dur }
@@ -371,7 +379,7 @@ extension PlayerModel {
             provideNext(after: afterIndex)
         case .ended:
             state = .stopped
-            syncNowPlayingState()
+            publishNowPlaying()
         case let .failed(message):
             lastError = message
             state = .stopped
@@ -391,17 +399,12 @@ extension PlayerModel {
         guard let index = spanPositions.removeValue(forKey: echo),
               queue.indices.contains(index), index != currentIndex else { return }
         let previous = currentIndex
-        currentIndex = index
-        currentTrack = queue[index]
-        duration = TimeInterval(queue[index].duration ?? 0)
-        position = 0
-        scrobbleTrackStarted()
-        saveQueueIfNeeded(force: true)
+        setCurrent(index)
         // The span that just finished is done — drop its stale mapping.
         if let previous {
             spanPositions = spanPositions.filter { $0.value != previous }
         }
-        updateNowPlayingTrack()
+        publishNowPlaying(refreshArtwork: true)
     }
 
     /// The engine asks for the successor to pre-buffer. `echo` is the position
@@ -415,29 +418,23 @@ extension PlayerModel {
         }
         spanPositions[target] = target
         guard let playback else { return }
-        let song = queue[target]
-        let id = song.id
-        let suffix = song.suffix
-        let dur = TimeInterval(song.duration ?? 0)
-        let gain = replayGain(for: song)
-        Task { await playback.enqueueNext(songId: id, suffix: suffix, duration: dur,
-                                          index: target, gain: gain) }
+        let args = handoff(for: queue[target])
+        Task { await playback.enqueueNext(songId: args.id, suffix: args.suffix,
+                                          duration: args.duration, index: target, gain: args.gain) }
     }
 
     // MARK: - Now Playing
 
-    private func updateNowPlayingTrack() {
+    /// Publish current metadata to the system Now Playing center; a track
+    /// change also refreshes the artwork (state syncs skip the fetch).
+    private func publishNowPlaying(refreshArtwork: Bool = false) {
         nowPlaying?.update(track: currentTrack, state: state, position: position, duration: duration)
-        guard let coverArt = currentTrack?.coverArt else { return }
+        guard refreshArtwork, let coverArt = currentTrack?.coverArt else { return }
         Task { [weak self, cacheKey = currentTrack?.artworkKey] in
             let image = await ArtworkCache.shared.image(coverArt: coverArt, cacheKey: cacheKey,
                                                         size: 600)
             self?.nowPlaying?.updateArtwork(image)
         }
-    }
-
-    private func syncNowPlayingState() {
-        nowPlaying?.update(track: currentTrack, state: state, position: position, duration: duration)
     }
 
     // MARK: - Helpers

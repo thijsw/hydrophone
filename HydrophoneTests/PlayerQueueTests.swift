@@ -51,6 +51,24 @@ struct PlayerQueueTests {
         #expect(player.queue.map(\.id) == ["1", "9", "2"])
     }
 
+    /// The manual-start and gapless-advance paths share one `becomeCurrent`
+    /// transition — arriving at the same track either way must leave
+    /// identical current-track state.
+    @Test func manualStartAndGaplessAdvanceAgreeOnCurrentState() {
+        let direct = PlayerModel()
+        direct.play(tracks: songs(["1", "2"]), startAt: 1)
+
+        let gapless = PlayerModel()
+        gapless.play(tracks: songs(["1", "2"]), startAt: 0)
+        gapless.handle(.wantNext(afterIndex: 0))   // engine pre-buffers "2"
+        gapless.handle(.trackChanged(index: 1))    // …and crosses into it
+
+        #expect(gapless.currentTrack == direct.currentTrack)
+        #expect(gapless.currentIndex == direct.currentIndex)
+        #expect(gapless.duration == direct.duration)
+        #expect(gapless.position == direct.position)
+    }
+
     @Test func seekClampsToDuration() {
         let player = PlayerModel()
         player.play(tracks: songs(["1"]), startAt: 0)

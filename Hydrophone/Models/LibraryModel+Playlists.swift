@@ -35,33 +35,30 @@ extension LibraryModel {
     }
 
     func deletePlaylist(id: String) async {
-        _ = try? await client.sendStatus(.deletePlaylist(id: id))
-        await reloadPlaylists()
+        await mutate(.deletePlaylist(id: id)) { await reloadPlaylists() }
     }
 
     func renamePlaylist(id: String, to name: String) async {
-        _ = try? await client.sendStatus(.updatePlaylist(id: id, name: name))
-        await reloadPlaylists()
+        await mutate(.updatePlaylist(id: id, name: name)) { await reloadPlaylists() }
     }
 
     func addToPlaylist(id: String, songIds: [String]) async {
         guard !songIds.isEmpty else { return }
-        _ = try? await client.sendStatus(.updatePlaylist(id: id, songIdsToAdd: songIds))
-        await reloadPlaylists()
+        await mutate(.updatePlaylist(id: id, songIdsToAdd: songIds)) { await reloadPlaylists() }
     }
 
     func removeFromPlaylist(id: String, indexes: [Int]) async {
         guard !indexes.isEmpty else { return }
-        _ = try? await client.sendStatus(.updatePlaylist(id: id, songIndexesToRemove: indexes))
-        await reloadPlaylists()
+        await mutate(.updatePlaylist(id: id, songIndexesToRemove: indexes)) { await reloadPlaylists() }
     }
 
     /// Reorder by replacing the playlist's contents with `songIds` in the new
     /// order — `updatePlaylist` can only append, so the full-replace form of
     /// `createPlaylist` is the canonical reorder mechanism.
     func reorderPlaylist(id: String, name: String, songIds: [String]) async {
-        _ = try? await client.sendStatus(.createPlaylist(name: name, playlistId: id, songIds: songIds))
-        await reloadPlaylists()
+        await mutate(.createPlaylist(name: name, playlistId: id, songIds: songIds)) {
+            await reloadPlaylists()
+        }
     }
 
 }

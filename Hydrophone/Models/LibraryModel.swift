@@ -95,17 +95,34 @@ final class LibraryModel {
     func loadMoreAlbums() async {
         guard !albumsExhausted else { return }
         if case .loading = albumsState { return }
-        albumsState = .loading
-        do {
+        await load("album", into: \.albumsState) { () async throws(SubsonicError) in
             let page = try await client.list(albumPageEndpoint(), of: Album.self)
             albums.append(contentsOf: page)
             albumOffset += page.count
             albumsExhausted = page.count < Self.pageSize
-            albumsState = .loaded(())
-        } catch {
-            albumsState = .failed(error.userMessage)
-            Self.log.error("album load failed: \(error.userMessage)")
         }
+    }
+
+    /// Owns the `.loading → .loaded/.failed` transition shared by the stateful
+    /// loads; `label` names the load in the failure log. Loads whose failure
+    /// semantics differ (genres keep `[]`, starred keeps stale data) stay out.
+    private func load(_ label: String,
+                      into state: ReferenceWritableKeyPath<LibraryModel, Load<Void>>,
+                      _ work: () async throws(SubsonicError) -> Void) async {
+        self[keyPath: state] = .loading
+        do {
+            try await work()
+            self[keyPath: state] = .loaded(())
+        } catch {
+            self[keyPath: state] = .failed(error.userMessage)
+            Self.log.error("\(label) load failed: \(error.userMessage)")
+        }
+    }
+
+    /// Best-effort list fetch: failures resolve to `[]` (views show their
+    /// empty states instead of an error).
+    private func fetchList<Element: SubsonicListElement>(_ endpoint: Endpoint) async -> [Element] {
+        (try? await client.list(endpoint, of: Element.self)) ?? []
     }
 
     /// The next page for the current sort/filter combination. Filters are
@@ -149,13 +166,9 @@ final class LibraryModel {
     func loadArtistsIfNeeded() async {
         guard artists.isEmpty else { return }
         if case .loading = artistsState { return }
-        artistsState = .loading
-        do {
+        await load("artist", into: \.artistsState) { () async throws(SubsonicError) in
             artists = try await client.list(.artists, of: ArtistIndex.self)
                 .flatMap { $0.artist ?? [] }
-            artistsState = .loaded(())
-        } catch {
-            artistsState = .failed(error.userMessage)
         }
     }
 
@@ -164,12 +177,8 @@ final class LibraryModel {
     func loadSongsIfNeeded() async {
         guard songs.isEmpty else { return }
         if case .loading = songsState { return }
-        songsState = .loading
-        do {
+        await load("song", into: \.songsState) { () async throws(SubsonicError) in
             songs = try await client.list(.randomSongs(size: 500), of: Song.self)
-            songsState = .loaded(())
-        } catch {
-            songsState = .failed(error.userMessage)
         }
     }
 
@@ -177,7 +186,7 @@ final class LibraryModel {
     /// from the Songs sample above so the visible list isn't disturbed.
     /// Best-effort: an empty result simply leaves playback untouched.
     func randomBatch(size: Int = 500) async -> [Song] {
-        (try? await client.list(.randomSongs(size: size), of: Song.self)) ?? []
+        await fetchList(.randomSongs(size: size))
     }
 
     // MARK: - Genres
@@ -275,8 +284,17 @@ final class LibraryModel {
     }
 
     func setAlbumStarred(_ starred: Bool, albumId: String) async {
-        _ = try? await client.sendStatus(.favorite(id: albumId, kind: .album, starred: starred))
-        await reloadStarred()
+        await mutate(.favorite(id: albumId, kind: .album, starred: starred)) {
+            await reloadStarred()
+        }
+    }
+
+    /// Fire a best-effort mutation, then refresh the affected collection —
+    /// the shared shape of playlist CRUD and favorite writes. Internal so
+    /// LibraryModel+Playlists can send through it.
+    func mutate(_ endpoint: Endpoint, thenReload reload: () async -> Void) async {
+        _ = try? await client.sendStatus(endpoint)
+        await reload()
     }
 
     // MARK: - Album detail
@@ -296,8 +314,7 @@ final class LibraryModel {
     }
 
     func songs(forGenre genre: String) async -> [Song] {
-        (try? await client.list(.songsByGenre(genre, count: Self.pageSize, offset: 0),
-                                of: Song.self)) ?? []
+        await fetchList(.songsByGenre(genre, count: Self.pageSize, offset: 0))
     }
 
 }
@@ -313,12 +330,12 @@ extension LibraryModel {
 
     /// Similar-song mix seeding Start Radio. `id` may be a song or artist id.
     func similarSongs(id: String, count: Int = 50) async -> [Song] {
-        (try? await client.list(.similarSongs2(id: id, count: count), of: Song.self)) ?? []
+        await fetchList(.similarSongs2(id: id, count: count))
     }
 
     /// Radio fallback for servers with no similarity data for an artist.
     func topSongs(artist name: String, count: Int = 50) async -> [Song] {
-        (try? await client.list(.topSongs(artist: name, count: count), of: Song.self)) ?? []
+        await fetchList(.topSongs(artist: name, count: count))
     }
 
     /// Random whole albums for Shuffle Albums, honoring the active grid
@@ -335,7 +352,7 @@ extension LibraryModel {
             endpoint = .albumList2(type: "byYear", size: 200, offset: 0,
                                    fromYear: from, toYear: through)
         }
-        let albums = (try? await client.list(endpoint, of: Album.self)) ?? []
+        let albums: [Album] = await fetchList(endpoint)
         if case .none = albumFilter { return albums }
         return Array(albums.shuffled().prefix(count))
     }
@@ -374,6 +391,6 @@ extension LibraryModel {
     }
 
     private func albumList(type: String) async -> [Album] {
-        (try? await client.list(.albumList2(type: type, size: 20, offset: 0), of: Album.self)) ?? []
+        await fetchList(.albumList2(type: type, size: 20, offset: 0))
     }
 }
