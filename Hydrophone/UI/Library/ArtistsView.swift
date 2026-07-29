@@ -88,9 +88,18 @@ struct ArtistDetailView: View {
 
     private var bioExpanded: Bool { bioExpandedID == artist.id }
 
-    /// Per-artist scroll memory (see `Binding.scrollID`): scoped by artist id
-    /// so only Back-from-an-album restores; the first album is the top id.
+    /// Per-artist scroll memory (see `Binding.scrollMemory`): scoped by
+    /// artist id so only Back-from-an-album restores; the first album is the
+    /// top id.
     @AppStorage("artistDetailScroll") private var storedScroll = ""
+    /// The restore has been consumed by a user scroll (see `scrollMemory`).
+    @State private var scrollRestored = false
+
+    private var scrollBinding: Binding<Album.ID?> {
+        .scrollMemory(read: { storedScroll }, write: { storedScroll = $0 },
+                      consumed: $scrollRestored, scope: artist.id,
+                      topIDs: { Set(albums.prefix(1).map(\.id)) })
+    }
 
     var body: some View {
         ScrollView {
@@ -113,9 +122,7 @@ struct ArtistDetailView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .scrollPosition(id: $storedScroll.scrollID(scope: artist.id,
-                                                   topIDs: Set(albums.prefix(1).map(\.id))),
-                        anchor: .top)
+        .scrollPosition(id: scrollBinding, anchor: .top)
         .task(id: artist.id) {
             async let albumsLoad = library.albums(forArtist: artist.id)
             async let infoLoad = library.artistInfo(id: artist.id)

@@ -7,10 +7,17 @@ struct AlbumsView: View {
     @Environment(LibraryModel.self) private var library
     @Environment(Navigator.self) private var navigator
 
-    /// Tracks the top-visible album id (see `Binding.scrollID`); cleared on
-    /// filter/sort changes (a new ordering starts at the top). A saved id
+    /// Tracks the top-visible album id (see `Binding.scrollMemory`); cleared
+    /// on filter/sort changes (a new ordering starts at the top). A saved id
     /// missing after relaunch (deep pagination) is a harmless no-op.
     @AppStorage("albumsScrollID") private var storedScrollID = ""
+    /// The restore has been consumed by a user scroll (see `scrollMemory`).
+    @State private var scrollRestored = false
+
+    private var scrollBinding: Binding<Album.ID?> {
+        .scrollMemory(read: { storedScrollID }, write: { storedScrollID = $0 },
+                      consumed: $scrollRestored)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -57,7 +64,7 @@ struct AlbumsView: View {
                     ProgressView().padding()
                 }
             }
-            .scrollPosition(id: $storedScrollID.scrollID(), anchor: .top)
+            .scrollPosition(id: scrollBinding, anchor: .top)
         }
         .navigationTitle("Albums")
         .task {

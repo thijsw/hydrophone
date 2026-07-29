@@ -50,6 +50,33 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Scroll memory: restore is one-shot, killing the mid-scroll snap (2026-07-29)
+User-reported: grid scrolling would run smoothly, then skip ~50 px, then
+continue. Instrumented with a scripted burst-scroll + accessibility
+scroll-bar probe across a build matrix (pre-elegance-pass baseline, current,
+two window widths): the skip reproduces identically on the *baseline* —
+**not** a regression from the 2026-07-28 refactors; it shipped with scroll
+persistence on 2026-07-18 and is window-width dependent (which is why it
+surfaced now).
+- Mechanism: `.scrollPosition(id:anchor:.top)` re-asserts whatever target
+  its binding reports whenever the view updates, and SwiftUI writes the
+  top-visible id back **every frame** while scrolling. At certain widths an
+  update lands mid-scroll and the re-assertion snaps the current top tile
+  flush to the anchor — the visible skip.
+- Fix: the stored id is now a **one-shot restore target, not a live
+  mirror** (`Binding.scrollMemory(read:write:consumed:…)`). `get` serves
+  the persisted id only until the first write-back flips a per-view
+  `@State` flag, then returns nil for the view's lifetime — a nil target
+  re-asserts nothing, so the snap is structurally impossible; writes keep
+  recording for the next restore. Adopted by the Albums grid, Home, and
+  artist detail.
+- Verified: probe shows zero snap spikes at the reproducing geometry (was:
+  one ~80–130 px forward snap per scroll settle); launch restore and
+  Back-from-album restore both land on the remembered tile (traced via
+  temporary get/set logging; two earlier "restore broken" readings were
+  artifacts of a mis-aimed synthetic Back click measuring the detail view's
+  own table). Suite + SwiftLint clean.
+
 ## Read-ahead cap made honest: count decoded, slice jumbo chunks (2026-07-28)
 The 8–15 s read-ahead cap wasn't holding (spotted during the elegance-pass
 verification): followers pre-buffered *minutes* before a boundary, and a

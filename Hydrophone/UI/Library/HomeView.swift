@@ -8,9 +8,16 @@ import SwiftUI
 struct HomeView: View {
     @Environment(LibraryModel.self) private var library
 
-    /// Section-level scroll memory (see `Binding.scrollID`) — the shelves are
-    /// the scroll targets; the greeting is the top id.
+    /// Section-level scroll memory (see `Binding.scrollMemory`) — the
+    /// shelves are the scroll targets; the greeting is the top id.
     @AppStorage("homeScrollID") private var storedScrollID = ""
+    /// The restore has been consumed by a user scroll (see `scrollMemory`).
+    @State private var scrollRestored = false
+
+    private var scrollBinding: Binding<String?> {
+        .scrollMemory(read: { storedScrollID }, write: { storedScrollID = $0 },
+                      consumed: $scrollRestored, topIDs: { ["greeting"] })
+    }
 
     private var allEmpty: Bool {
         library.homeNewest.isEmpty && library.homeRecent.isEmpty
@@ -55,7 +62,7 @@ struct HomeView: View {
                     .padding(.vertical, 20)
                     .scrollTargetLayout()
                 }
-                .scrollPosition(id: $storedScrollID.scrollID(topIDs: ["greeting"]), anchor: .top)
+                .scrollPosition(id: scrollBinding, anchor: .top)
             }
         }
         .navigationTitle("Home")
