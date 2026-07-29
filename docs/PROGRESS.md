@@ -38,9 +38,9 @@ Liquid Glass look awaits a macOS 26 machine, plus by-hand VoiceOver/contrast
 spot checks) ·
 M8 🚧 (Developer ID pipeline complete incl. notarization + stapling —
 Gatekeeper-accepted distributable build; CI runs the unit suite on every
-push; final icon shipped 2026-07-29; MAS certificates/app record created and
-first build (0.6.0/10) uploaded 2026-07-29; remaining: fill the ASC listing
-(screenshots + copy staged on the Desktop) and submit for review)
+push; final icon shipped 2026-07-29; MAS build 0.6.0/10 uploaded and
+**submitted for App Review 2026-07-29** — remaining: the review outcome,
+then release on approval)
 
 ## How to build / test
 ```sh
@@ -71,9 +71,9 @@ demand. 0.6.0 (build 10) uploaded: "Upload succeeded", processing on ASC.
   Screenshot gotcha: the demo server's junk playlists (one with a slur
   name) must stay out of frame — the sidebar's Playlists section was
   collapsed before capturing.
-- Remaining (ASC web UI): create version 0.6.0 on the app record, attach
-  the processed build, paste listing copy, answer App Privacy ("Data Not
-  Collected") + age rating, submit for review.
+- Listing filled and **submitted for App Review the same day** (version
+  0.6.0, build 10, "Data Not Collected", 4+, demo-server review notes).
+  Awaiting the review outcome.
 
 ## v0.6.0 released (2026-07-29)
 Build 10, notarized/stapled/Gatekeeper-accepted, hand-written notes.
