@@ -50,6 +50,26 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Sidebar: re-selecting the current row returns to the section root (2026-07-29)
+User-reported: with an album open, clicking "Albums" in the sidebar did
+nothing — the selection binding is silent when the value doesn't change, so
+the open-album overlay stayed. Implements the iOS tap-current-tab-pops
+convention (Music/Photos behave the same); composes with scroll memory, so
+popping back lands on the remembered grid position, same as the Back link.
+- **First attempt (reverted the same day, user-caught):** a
+  `simultaneousGesture` tap on each row swallowed the backing table's
+  primary clicks — rows stopped *selecting* on macOS. The Up Next gotcha's
+  sibling; `04` now records the general rule (no SwiftUI tap gestures on
+  macOS List rows).
+- **Shipped mechanism:** `ListReselectMonitor`, a local mouse-down monitor
+  that hit-tests the List's `NSTableView` and passes every event through
+  untouched. Local monitors run before dispatch, so clicked == selected
+  identifies exactly a re-click; RootView clears `Navigator.album` on the
+  signal. Table-finding walk shared with `ListSelectionHighlightDisabler`.
+- Live-verified: section switching (including the switch *to* Albums the
+  gesture had broken), open album → re-click Albums → grid restored at
+  position; playlist rows covered by the same monitor. Suite + lint clean.
+
 ## Scroll memory: restore is one-shot, killing the mid-scroll snap (2026-07-29)
 User-reported: grid scrolling would run smoothly, then skip ~50 px, then
 continue. Instrumented with a scripted burst-scroll + accessibility

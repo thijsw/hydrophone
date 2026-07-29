@@ -43,7 +43,12 @@ struct RootView: View {
             SidebarView(selection: Binding(
                 get: { selection },
                 set: { selectionRaw = ($0 ?? .albums).rawValue }
-            ))
+            ), onReselect: {
+                // Re-clicking the current section returns to its root — the
+                // tap-current-tab-pops convention. Different-row clicks are
+                // handled by the selectionRaw observer below.
+                navigator.album = nil
+            })
         } detail: {
             // The Now Playing panel is a width-animated trailing pane INSIDE
             // the detail column — deliberately NOT `.inspector` (which shoves

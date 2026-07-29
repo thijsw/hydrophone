@@ -4,6 +4,9 @@ import SwiftUI
 /// create / rename / delete. See docs/04-ui-ux.md.
 struct SidebarView: View {
     @Binding var selection: SidebarSelection?
+    /// Called when the already-selected row is clicked again — RootView pops
+    /// back to the section root (dismisses an open album). See `04`.
+    var onReselect: () -> Void = {}
     @Environment(LibraryModel.self) private var library
     @Environment(AppModel.self) private var app
 
@@ -55,6 +58,7 @@ struct SidebarView: View {
             }
         }
         .background(ListSelectionHighlightDisabler())
+        .background(ListReselectMonitor(onReselect: onReselect))
         .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 320)
         // Drop the automatic sidebar-toggle (we want the sidebar always visible).
         .toolbar(removing: .sidebarToggle)

@@ -22,30 +22,34 @@ struct ListSelectionHighlightDisabler: NSViewRepresentable {
                 table.selectionHighlightStyle = .none
             }
         }
+    }
+}
 
-        /// The background view is a sibling of the List's scroll view, so
-        /// walk up the ancestors and search each subtree for the nearest
-        /// table (stopping at the first hit keeps us inside this List rather
-        /// than reaching another one across the window).
-        private func nearestTableView() -> NSTableView? {
-            var ancestor = superview
-            var previous: NSView = self
-            while let current = ancestor {
-                for sibling in current.subviews where sibling !== previous {
-                    if let table = findTable(in: sibling) { return table }
-                }
-                previous = current
-                ancestor = current.superview
+extension NSView {
+    /// The `NSTableView` backing the `List` this view is attached to (via
+    /// `.background`): the background view is a sibling of the List's scroll
+    /// view, so walk up the ancestors and search each subtree for the
+    /// nearest table (stopping at the first hit keeps us inside this List
+    /// rather than reaching another one across the window). Shared by the
+    /// List-tuning representables in this folder.
+    func nearestTableView() -> NSTableView? {
+        var ancestor = superview
+        var previous: NSView = self
+        while let current = ancestor {
+            for sibling in current.subviews where sibling !== previous {
+                if let table = Self.findTable(in: sibling) { return table }
             }
-            return nil
+            previous = current
+            ancestor = current.superview
         }
+        return nil
+    }
 
-        private func findTable(in view: NSView) -> NSTableView? {
-            if let table = view as? NSTableView { return table }
-            for sub in view.subviews {
-                if let table = findTable(in: sub) { return table }
-            }
-            return nil
+    private static func findTable(in view: NSView) -> NSTableView? {
+        if let table = view as? NSTableView { return table }
+        for sub in view.subviews {
+            if let table = findTable(in: sub) { return table }
         }
+        return nil
     }
 }

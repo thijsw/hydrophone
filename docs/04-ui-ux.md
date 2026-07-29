@@ -199,6 +199,14 @@ selectable lists; selections are part of restorable view state. Toggleable
   in-place state: an opened album renders over the current section with an
   inline accent "‹ Back" link; switching sections or editing the search query
   closes it.
+- **Re-selecting the current sidebar row also closes it** (the iOS
+  tap-current-tab-pops convention; Music/Photos behave the same). The
+  selection binding is silent when the value doesn't change, and row-level
+  tap gestures swallow the backing table's primary clicks (the Up Next
+  gotcha's sibling — clicking rows stopped selecting them), so the sidebar
+  detects re-clicks with `ListReselectMonitor`: a local mouse-down monitor
+  that hit-tests the List's `NSTableView` and passes every event through
+  untouched.
 - Artists is a master-detail split (artist list left, albums right); search
   hands an artist off via `Navigator.pendingArtist` (selects it in the Artists
   section and clears the query).
