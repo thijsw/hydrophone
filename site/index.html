@@ -176,9 +176,24 @@
 
     <article class="release">
       <header>
+        <span class="release-ver">0.6.0</span>
+        <time datetime="2026-07-29">July 29, 2026</time>
+        <span class="release-badge">Latest</span>
+      </header>
+      <ul>
+        <li><strong>Sonicwave is now Hydrophone</strong> — new name, new domain, and a new app icon: a play button floating half-submerged at dusk. Coming from Sonicwave? Reconnect to your server once and delete the old app.</li>
+        <li><strong>Queue-first Now Playing</strong> — collapse the big artwork card to a compact strip and let the play queue take the whole panel; the choice persists.</li>
+        <li><strong>Cover art, once per album</strong> — the cache is now album-keyed, so a queued album shows every thumbnail instantly from a single download, and transient fetch failures retry instead of leaving gray tiles.</li>
+        <li><strong>Smooth scrolling</strong> — fixed a long-standing glitch where grids could visibly skip ~100&nbsp;px mid-scroll at certain window widths.</li>
+        <li><strong>Sidebar navigation</strong> — clicking the section you&rsquo;re already in returns to its root, like tapping the current tab in iOS Music.</li>
+        <li><strong>Streaming keeps its memory flat</strong> — read-ahead now honestly holds its 8&ndash;15&nbsp;s cap instead of buffering whole tracks, fixing a rare silent track-skip on flaky connections.</li>
+      </ul>
+    </article>
+
+    <article class="release">
+      <header>
         <span class="release-ver">0.5.1</span>
         <time datetime="2026-07-18">July 18, 2026</time>
-        <span class="release-badge">Latest</span>
       </header>
       <ul>
         <li><strong>Back means back</strong> — returning from an album now lands exactly where you left: the selected artist, your scroll position in Albums, Home and artist pages, even an expanded artist bio.</li>

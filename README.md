@@ -43,8 +43,9 @@ keyboard-friendly, low-footprint, native — instead of a browser tab.
   filter-aware); album grid filters by genre/decade
 - Server playlists with full round-trip editing; favorites everywhere
 - Scrobbling; trigger a server library scan from the app
-- Queue saved server-side with the playhead — survives relaunches,
-  resumable from other clients
+- Queue-first Now Playing panel — the artwork hero collapses to a compact
+  strip so Up Next gets the full height; queue saved server-side with the
+  playhead — survives relaunches, resumable from other clients
 - Menu-bar player, media keys, Control Center widget, iTunes-style LCD
 - Light/Dark, keyboard-first, VoiceOver, state restoration; sandboxed with
   a single (network) entitlement

@@ -51,6 +51,16 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## v0.6.0 released (2026-07-29)
+Build 10, notarized/stapled/Gatekeeper-accepted, hand-written notes.
+First release under the **Hydrophone** name: the full rename + rebrand,
+the Dusk app icon (below), queue-first Now Playing panel, album-keyed
+artwork cache, one-shot scroll restore, sidebar re-select-to-root, the
+honest read-ahead cap, and the elegance-pass refactors. Website changelog
+entry added; README synced (queue-first panel folded into the queue
+bullet). Release notes flag the bundle-id change for Sonicwave users
+(fresh settings, reconnect once).
+
 ## New app icon: half-submerged play button ("Depth", Dusk palette) (2026-07-29)
 Replaced the placeholder hanging-bars icon with a mark built around what the
 app does: a white play triangle breaking a waterline — crisp above the
