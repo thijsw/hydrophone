@@ -38,7 +38,8 @@ Liquid Glass look awaits a macOS 26 machine, plus by-hand VoiceOver/contrast
 spot checks) ·
 M8 🚧 (Developer ID pipeline complete incl. notarization + stapling —
 Gatekeeper-accepted distributable build; CI runs the unit suite on every
-push; remaining: MAS certificates/app record, final icon, App Privacy)
+push; final icon shipped 2026-07-29; remaining: MAS certificates/app record,
+App Privacy)
 
 ## How to build / test
 ```sh
@@ -47,6 +48,23 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
   -destination 'platform=macOS' test CODE_SIGNING_ALLOWED=NO
 ```
+
+---
+
+## New app icon: half-submerged play button ("Depth", Dusk palette) (2026-07-29)
+Replaced the placeholder hanging-bars icon with a mark built around what the
+app does: a white play triangle breaking a waterline — crisp above the
+surface, refracted (offset + warm-tinted `#ffc79b`) below it — a sunset sky
+(`#ffb56b→#ff7e4f`, horizon glow) over cold night water (`#123c5e→#041c33`).
+Chosen from six function-focused concepts, then nine on-theme variations,
+presented visually; still reads as a play button at 16 px.
+- Vector master: `docs/assets/AppIcon.svg` (1024 grid, Apple margin + baked
+  drop shadow via `feDropShadow`). Rasterized per size with
+  `qlmanage -t -s <size>` so every PNG is rendered from vector, not
+  downscaled; all seven sizes in `AppIcon.appiconset` replaced.
+- Website favicon + header logo (`site/index.html`) swapped to a compact
+  32-grid flat version of the same mark (goes live on next release deploy).
+- ✅ Build succeeds; new icon confirmed in the built app's `AppIcon.icns`.
 
 ---
 
