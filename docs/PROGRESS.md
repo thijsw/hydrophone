@@ -38,8 +38,9 @@ Liquid Glass look awaits a macOS 26 machine, plus by-hand VoiceOver/contrast
 spot checks) ·
 M8 🚧 (Developer ID pipeline complete incl. notarization + stapling —
 Gatekeeper-accepted distributable build; CI runs the unit suite on every
-push; final icon shipped 2026-07-29; remaining: MAS certificates/app record,
-App Privacy)
+push; final icon shipped 2026-07-29; MAS certificates/app record created and
+first build (0.6.0/10) uploaded 2026-07-29; remaining: fill the ASC listing
+(screenshots + copy staged on the Desktop) and submit for review)
 
 ## How to build / test
 ```sh
@@ -50,6 +51,29 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 ```
 
 ---
+
+## Mac App Store: first build uploaded (2026-07-29)
+The MAS pipeline is live end-to-end. Portal one-timers done by hand (Apple
+Distribution + Mac Installer Distribution certificates, App ID
+`app.hydrophone` with **no** extra capabilities, ASC app record);
+`scripts/release.sh app-store` now archives and **uploads in one step** —
+`ExportOptions-app-store.plist` gained `destination: upload` (altool's
+upload path is discontinued) and the export passes
+`-allowProvisioningUpdates` so the provisioning profile is created on
+demand. 0.6.0 (build 10) uploaded: "Upload succeeded", processing on ASC.
+- `Info.plist`: `ITSAppUsesNonExemptEncryption = NO` (HTTPS only) so every
+  upload skips the export-compliance question.
+- Listing prerequisites produced: privacy page at
+  <https://hydrophone.app/privacy.html> (truthful "collects nothing",
+  linked from the site footer) and four 2880×1800 screenshots driven live
+  against the demo server (`~/Desktop/hydrophone-mas-screenshots/`, with
+  `listing.md` holding drafted description/keywords/review notes).
+  Screenshot gotcha: the demo server's junk playlists (one with a slur
+  name) must stay out of frame — the sidebar's Playlists section was
+  collapsed before capturing.
+- Remaining (ASC web UI): create version 0.6.0 on the app record, attach
+  the processed build, paste listing copy, answer App Privacy ("Data Not
+  Collected") + age rating, submit for review.
 
 ## v0.6.0 released (2026-07-29)
 Build 10, notarized/stapled/Gatekeeper-accepted, hand-written notes.

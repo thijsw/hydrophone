@@ -10,8 +10,9 @@
 #     xcrun notarytool store-credentials hydrophone \
 #       --apple-id <apple-id> --team-id 4HNWJ993V9
 #
-# app-store — archive → export a signed .pkg for App Store Connect upload.
-#   Prerequisites are listed in scripts/ExportOptions-app-store.plist.
+# app-store — archive → validate + upload the signed .pkg to App Store
+#   Connect (export destination "upload"). Prerequisites are listed in
+#   scripts/ExportOptions-app-store.plist.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -34,15 +35,16 @@ xcodebuild -project Hydrophone.xcodeproj -scheme "$SCHEME" -configuration Releas
   -destination 'generic/platform=macOS' -archivePath "$ARCHIVE" archive | tail -2
 
 echo "==> Exporting ($METHOD)"
+EXTRA=""
+[[ "$METHOD" == "app-store" ]] && EXTRA="-allowProvisioningUpdates"
 xcodebuild -exportArchive -archivePath "$ARCHIVE" \
   -exportOptionsPlist "scripts/ExportOptions-$METHOD.plist" \
-  -exportPath "$EXPORT" | tail -2
+  -exportPath "$EXPORT" $EXTRA | tail -4
 
 if [[ "$METHOD" == "app-store" ]]; then
-  PKG=$(ls "$EXPORT"/*.pkg)
-  echo "==> Exported $PKG"
-  echo "Upload with: xcrun altool --upload-package … or Xcode Organizer /"
-  echo "Transporter. Done."
+  echo "==> Uploaded to App Store Connect."
+  echo "    The build appears under the app record after processing (~15 min);"
+  echo "    attach it to a version and submit at appstoreconnect.apple.com."
   exit 0
 fi
 

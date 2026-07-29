@@ -10,6 +10,9 @@ http://192.168.x.x). NSAllowsLocalNetworking permits exactly that without
 opening arbitrary cleartext to the internet (NSAllowsArbitraryLoads stays
 off). Non-local plain-HTTP remains blocked by ATS; SubsonicClient maps that
 failure to an actionable message. See issue #2.
+
+ITSAppUsesNonExemptEncryption: HTTPS/TLS only — exempt, so App Store
+Connect skips the export-compliance question on every upload.
 -->
 <plist version="1.0">
 <dict>
@@ -18,5 +21,7 @@ failure to an actionable message. See issue #2.
         <key>NSAllowsLocalNetworking</key>
         <true/>
     </dict>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>

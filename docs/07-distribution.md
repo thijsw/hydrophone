@@ -52,12 +52,16 @@ needed (playback, Keychain, networking all work in the exported app).
   otherwise) → versioned zip. One-time setup for notarization:
   `xcrun notarytool store-credentials hydrophone --apple-id … --team-id
   4HNWJ993V9` (app-specific password or ASC API key).
-- **Mac App Store path (config prepared; blocked on portal artifacts):**
-  `release.sh app-store` exports an upload-ready `.pkg` once these exist —
-  an **Apple Distribution** + **Mac Installer Distribution** certificate, an
-  App Store Connect app record for `app.hydrophone`, and a Mac App Store
-  provisioning profile (prerequisites also listed in
-  `ExportOptions-app-store.plist`).
+- **Mac App Store path (working end-to-end, 2026-07-29):**
+  `release.sh app-store` archives and uploads the signed `.pkg` straight to
+  App Store Connect (`destination: upload` in
+  `ExportOptions-app-store.plist`; altool's upload path is discontinued).
+  The export passes `-allowProvisioningUpdates`, so the Mac App Store
+  provisioning profile is created on demand from the signed-in Xcode
+  account. One-time portal artifacts in place: Apple Distribution + Mac
+  Installer Distribution certificates, App ID `app.hydrophone` (no extra
+  capabilities), ASC app record. `ITSAppUsesNonExemptEncryption = NO` in
+  Info.plist skips the per-upload export-compliance question.
 - Debug still signs with Developer ID (hardened runtime off) for the stable
   Keychain designated requirement — see `PROGRESS.md`.
 - **GitHub Releases:** `scripts/publish.sh <version>` bumps
@@ -93,11 +97,12 @@ needed (playback, Keychain, networking all work in the exported app).
       icon still to be replaced before submission).
 - [x] No Tahoe-only API without `#available` guard (none used).
 - [ ] App Privacy details accurate (no tracking/analytics v1) — fill in at
-      App Store Connect submission time.
+      App Store Connect submission time ("Data Not Collected"; privacy
+      policy URL: https://hydrophone.app/privacy.html).
 - [x] Reviewer notes / demo credentials prepared (public Navidrome demo +
       in-app "Use Demo Server" button when unconfigured).
 - [x] Signing pipeline produces a verified Developer ID build
-      (`scripts/release.sh`); MAS export configured, pending the Apple
-      Distribution certificate + app record + profile.
+      (`scripts/release.sh`); MAS archive → upload verified end-to-end
+      (0.6.0 build 10 uploaded 2026-07-29).
 - [x] Notarization round-trip — Accepted, stapled, Gatekeeper
       `source=Notarized Developer ID` (2026-07-07).

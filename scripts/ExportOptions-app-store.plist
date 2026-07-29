@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-Mac App Store export. Prerequisites (one-time, Apple Developer portal /
-App Store Connect — see docs/07-distribution.md):
+Mac App Store export + upload (destination "upload" validates and pushes the
+signed .pkg to App Store Connect in one step; altool's upload path is
+discontinued). Requires, one-time (all in place since 2026-07-29):
   1. "Apple Distribution" + "Mac Installer Distribution" certificates in the
      login keychain.
   2. An App Store Connect app record for app.hydrophone.
-  3. A "Mac App Store" provisioning profile for the bundle id (download via
-     Xcode's account settings or the portal).
+  3. Xcode signed into the team account (the provisioning profile is created
+     on demand via -allowProvisioningUpdates in release.sh).
 Then: scripts/release.sh app-store
 -->
 <plist version="1.0">
 <dict>
     <key>method</key>
     <string>app-store-connect</string>
+    <key>destination</key>
+    <string>upload</string>
     <key>teamID</key>
     <string>4HNWJ993V9</string>
     <key>signingStyle</key>
