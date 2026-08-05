@@ -77,7 +77,7 @@ needed (playback, Keychain, networking all work in the exported app).
   `app-version` spans — the public download front door stays current with
   zero manual steps.
 
-## Review considerations 🔶
+## Review considerations ✅ (0.6.0 approved 2026-08-05, first submission)
 
 - Functionality requires a user-supplied server — reviewer notes point at the
   **public Navidrome demo**: `https://demo.navidrome.org`, user `demo`,

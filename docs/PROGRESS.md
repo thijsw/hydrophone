@@ -38,9 +38,10 @@ Liquid Glass look awaits a macOS 26 machine, plus by-hand VoiceOver/contrast
 spot checks) ·
 M8 🚧 (Developer ID pipeline complete incl. notarization + stapling —
 Gatekeeper-accepted distributable build; CI runs the unit suite on every
-push; final icon shipped 2026-07-29; MAS build 0.6.0/10 uploaded and
-**submitted for App Review 2026-07-29** — remaining: the review outcome,
-then release on approval)
+push; final icon shipped 2026-07-29; MAS build 0.6.0/10 **approved by App
+Review 2026-08-05**, release set to manual — remaining: press release in
+ASC, confirm the listing is live, then point the website + README at the
+store page)
 
 ## How to build / test
 ```sh
@@ -51,6 +52,26 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 ```
 
 ---
+
+## Fix: app icon shipped with opaque white corners (2026-08-05)
+The 0.6.0 icon PNGs were flattened onto white at rasterization time — zero
+transparent pixels, so the squircle sat on a white square tile in the Dock
+and Finder. The SVG source (`docs/assets/AppIcon.svg`) was always correct
+(824×824 rounded rect on a transparent 1024 canvas). Re-rasterized with
+headless Chrome (`--default-background-color=00000000`) at 1024, downscaled
+the smaller sizes with `sips` (Chrome renders blank below ~150 px windows),
+and verified corner alpha on every PNG and on the compiled `.icns` in the
+built app. Goes out as the 0.6.1 bugfix before the store release.
+
+## Mac App Store: approved (2026-08-05)
+0.6.0 (build 10) passed App Review on the first submission — the
+"Use Demo Server" one-click path did its job as the reviewer entry point.
+The version release is set to **manual**, so the app sits in Pending
+Developer Release until the button is pressed in App Store Connect.
+Remaining before M8 closes: release the version, confirm the listing is
+live on the storefront, then swap the "Mac App Store in progress" wording
+on the website and in README.md for the real store link (and record the
+ASC app ID somewhere in the repo while at it).
 
 ## Mac App Store: first build uploaded (2026-07-29)
 The MAS pipeline is live end-to-end. Portal one-timers done by hand (Apple
