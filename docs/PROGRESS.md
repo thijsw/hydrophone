@@ -57,10 +57,14 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 Published to GitHub Releases via `publish.sh` (notarized, stapled,
 Gatekeeper-accepted); hand-written notes + site changelog entry done.
 Sole change: the icon transparency fix below. README needs no sync (no
-feature changes). MAS upload of build 11 (`release.sh app-store`) runs
-separately; then create 0.6.1 in ASC, submit for review, and release
-**0.6.1 instead of the still-pending 0.6.0** so the store never shows the
-white-tile icon.
+feature changes). Build 11 uploaded via `release.sh app-store` and
+**submitted for App Review same day**: ASC blocks adding a version while
+one is Pending Developer Release, so the 0.6 release was cancelled
+(status → Developer Rejected), the same version record edited to 0.6.1
+with build 11 attached, and resubmitted — the store never shows the
+white-tile icon. Manual release stays selected. ASC app ID: 6795956982
+(store URL once live: <https://apps.apple.com/app/id6795956982> — point
+site + README there on release).
 
 ## Fix: app icon shipped with opaque white corners (2026-08-05)
 The 0.6.0 icon PNGs were flattened onto white at rasterization time — zero
