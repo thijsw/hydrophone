@@ -53,6 +53,15 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Release: v0.6.1 (build 11) — icon fix (2026-08-05)
+Published to GitHub Releases via `publish.sh` (notarized, stapled,
+Gatekeeper-accepted); hand-written notes + site changelog entry done.
+Sole change: the icon transparency fix below. README needs no sync (no
+feature changes). MAS upload of build 11 (`release.sh app-store`) runs
+separately; then create 0.6.1 in ASC, submit for review, and release
+**0.6.1 instead of the still-pending 0.6.0** so the store never shows the
+white-tile icon.
+
 ## Fix: app icon shipped with opaque white corners (2026-08-05)
 The 0.6.0 icon PNGs were flattened onto white at rasterization time — zero
 transparent pixels, so the squircle sat on a white square tile in the Dock
