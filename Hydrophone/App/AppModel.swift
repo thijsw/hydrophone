@@ -129,7 +129,7 @@ final class AppModel {
     let nowPlaying: NowPlayingCenter
 
     init() {
-        let credentials = KeychainCredentialStore()
+        let credentials = Self.makeCredentialStore()
         let client = SubsonicClient(credentials: credentials)
         let playback = PlaybackService(client: client)
         let nowPlaying = NowPlayingCenter()
@@ -166,6 +166,25 @@ final class AppModel {
         ) { [weak player] _ in
             MainActor.assumeIsolated { player?.saveQueueIfNeeded(force: true) }
         }
+    }
+
+    /// Screenshot/dev harness (Debug builds only): when
+    /// `HYDROPHONE_SCREENSHOT_SERVER/_USER/_PASS` are set in the environment,
+    /// credentials live in an ephemeral in-memory store instead of the
+    /// Keychain, so a run against a throwaway server can never disturb the
+    /// real primary-server item. See docs/08-testing.md.
+    private static func makeCredentialStore() -> CredentialStore {
+        #if DEBUG
+        let env = ProcessInfo.processInfo.environment
+        if let server = env["HYDROPHONE_SCREENSHOT_SERVER"],
+           let url = URL(string: server),
+           let user = env["HYDROPHONE_SCREENSHOT_USER"],
+           let pass = env["HYDROPHONE_SCREENSHOT_PASS"] {
+            return InMemoryCredentialStore(ServerCredentials(
+                baseURL: url, username: user, secret: pass, authMethod: .tokenSalt))
+        }
+        #endif
+        return KeychainCredentialStore()
     }
 
     /// Fetch the server-saved play queue and hand it to the player, restored

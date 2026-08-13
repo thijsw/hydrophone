@@ -1,6 +1,7 @@
 excluded:
   - DerivedData
   - .build
+  - drafts
 
 # PlayerModel.swift carries the queue/transport core plus the restore hook;
 # separable subsystems already live in extension files (+RemoteCommands,

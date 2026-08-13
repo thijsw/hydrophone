@@ -38,10 +38,11 @@ Liquid Glass look awaits a macOS 26 machine, plus by-hand VoiceOver/contrast
 spot checks) ·
 M8 🚧 (Developer ID pipeline complete incl. notarization + stapling —
 Gatekeeper-accepted distributable build; CI runs the unit suite on every
-push; final icon shipped 2026-07-29; MAS build 0.6.0/10 **approved by App
-Review 2026-08-05**, release set to manual — remaining: press release in
-ASC, confirm the listing is live, then point the website + README at the
-store page)
+push; final icon shipped 2026-07-29; MAS: 0.6.0/10 approved 2026-08-05 but
+superseded unreleased, 0.6.1/11 **rejected 2026-08-12** (window reopen —
+fixed in code; screenshot artwork — needs new ASC screenshots) — remaining:
+retake screenshots, bump version, resubmit, then point the website + README
+at the store page)
 
 ## How to build / test
 ```sh
@@ -52,6 +53,36 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 ```
 
 ---
+
+## Rights-cleared App Store screenshots produced (2026-08-13)
+Answer to the 5.2.1 rejection: six art-directed 2560×1600 screenshots in
+`drafts/appstore/final/` (git-ignored), showing only original content — a
+generated library of 14 fictional albums (hand-written SVG covers rendered
+with headless Chrome; quiet-pink-noise AAC at a realistic ~192 kbps, since
+encoded silence reads "2 kbps" in the Quality column) served by a local
+Navidrome and seeded with playlists/favorites/scrobbles so Home looks
+lived-in. Captures were driven against a Debug build using a new
+DEBUG-only env override (`HYDROPHONE_SCREENSHOT_SERVER/_USER/_PASS` →
+in-memory credential store in `AppModel`), so the real Keychain item was
+never touched; user defaults were snapshotted and restored around the run.
+Composites reuse the site's palette/type (Bricolage Grotesque + Archivo,
+#0b0b0d/#41c6f2) and its H1 as the hero line. Full regeneration kit +
+notes in `drafts/appstore/README.md`. Remaining for resubmission: bump to
+0.6.2 (build 12), upload build + screenshots in ASC, reply to the review.
+
+## App Review: 0.6.1 rejected — window reopen + screenshot artwork (2026-08-12)
+0.6.1 (build 11) came back with two issues. **Guideline 4:** closing the main
+window left no menu item to reopen it — `CommandGroup(replacing: .newItem)`
+had removed New Window (⌘N → New Playlist), and a `WindowGroup` offers no
+other route back. Fixed by making the main scene a single `Window("Hydrophone",
+id: "main")` — the system now lists "Hydrophone" in the Window menu, and it
+matches reality anyway (one shared player, multiple windows never made
+sense). Live-verified: close → 0 windows → Window ▸ Hydrophone reopens.
+**Guideline 5.2.1:** the ASC screenshots (taken against the Navidrome demo
+library) show third-party album covers — needs new screenshots with cleared
+artwork or documentary evidence in ASC; no code change. Note the same
+screenshots passed review for 0.6.0, so reviewer discretion varies — don't
+count on it. Next submission needs a version bump + new screenshots.
 
 ## Release: v0.6.1 (build 11) — icon fix (2026-08-05)
 Published to GitHub Releases via `publish.sh` (notarized, stapled,
