@@ -39,10 +39,10 @@ spot checks) ·
 M8 🚧 (Developer ID pipeline complete incl. notarization + stapling —
 Gatekeeper-accepted distributable build; CI runs the unit suite on every
 push; final icon shipped 2026-07-29; MAS: 0.6.0/10 approved 2026-08-05 but
-superseded unreleased, 0.6.1/11 **rejected 2026-08-12** (window reopen —
-fixed in code; screenshot artwork — needs new ASC screenshots) — remaining:
-retake screenshots, bump version, resubmit, then point the website + README
-at the store page)
+superseded unreleased, 0.6.1/11 rejected 2026-08-12 (window reopen +
+screenshot artwork), 0.6.2/12 **resubmitted 2026-08-13** with the
+Window-scene fix and rights-cleared screenshots — remaining: pass review,
+release, then point the website + README at the store page)
 
 ## How to build / test
 ```sh
@@ -53,6 +53,13 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 ```
 
 ---
+
+## Mac App Store: 0.6.2 resubmitted for review (2026-08-13)
+The rejected version record was edited to 0.6.2 with build 12 attached,
+the six rights-cleared screenshots replaced the old set (ASC quirk worth
+remembering: concurrent uploads land in arbitrary order — upload one file
+at a time to keep the sequence), and the submission went back to App
+Review with a reply covering both fixes. Now waiting on the verdict.
 
 ## Release: v0.6.2 (build 12) — window reopen fix (2026-08-13)
 Published via `publish.sh` (notarized, stapled, Gatekeeper-accepted);
