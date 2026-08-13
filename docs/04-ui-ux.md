@@ -8,11 +8,15 @@ workflow.)
 
 ## Window & scene structure ✅
 
-- **Main window** — `WindowGroup` containing a `NavigationSplitView` shell.
+- **Main window** — a single `Window` scene (not `WindowGroup`; the player is
+  one shared engine/queue, so multiple windows make no sense) containing a
+  `NavigationSplitView` shell. The `Window` scene makes the system list
+  "Hydrophone" in the Window menu, so the window can be reopened after
+  closing — an App Review guideline-4 requirement (0.6.1 rejection).
 - **Settings** — a `Settings` scene (native Preferences window; ⌘,). See `02`
   for server/auth/transcoding contents.
 - **MenuBarExtra** — Now Playing panel scene (below).
-- Support multiple windows, resizing, full-screen, Stage Manager, and
+- Support resizing, full-screen, Stage Manager, and
   **state restoration**. Implemented: selected sidebar section, Now Playing
   panel visibility, column-browser visibility, column-browser **selections**
   (genre/artist/album), and per-view-kind table **sort** (key + direction,
@@ -228,7 +232,9 @@ Menu bar via `Commands` (`HydrophoneCommands`):
   Column Browser (⌥⌘B), plus the standard sidebar toggle.
 - **Find:** ⌘F focuses the sidebar search field (a hidden button —
   `.searchable` has no command-level focus hook).
-- **Edit / Window / Help:** system defaults.
+- **Edit / Window / Help:** system defaults; the Window menu additionally
+  lists "Hydrophone" (from the `Window` scene) to reopen the closed main
+  window.
 
 ## Liquid Glass & appearance ✅
 

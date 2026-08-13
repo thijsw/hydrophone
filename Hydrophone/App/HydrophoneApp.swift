@@ -10,7 +10,11 @@ struct HydrophoneApp: App {
     @State private var app = AppModel()
 
     var body: some Scene {
-        WindowGroup {
+        // A single `Window` (not `WindowGroup`): the player is one shared
+        // engine/queue, so multiple windows make no sense — and the system
+        // lists the window in the Window menu, so it can be reopened after
+        // closing (App Review guideline 4).
+        Window("Hydrophone", id: "main") {
             RootView()
                 .environment(app)
                 .environment(app.player)
