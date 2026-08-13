@@ -16,7 +16,7 @@ Mac app. Streaming-only, audiophile-grade playback, no Electron in sight.
 
 **[Website](https://hydrophone.app/)** · **[Latest release](https://github.com/thijsw/hydrophone/releases/latest)**
 
-![Hydrophone playing The Butcher's Ballroom — track table, quality badges and Now Playing panel with Up Next](site/assets/app-window.png)
+![Hydrophone playing Meridian by Ada Lark — track table, quality badges and Now Playing panel with Up Next](site/assets/app-window.png)
 
 </div>
 
