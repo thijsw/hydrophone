@@ -54,6 +54,13 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Release: v0.6.2 (build 12) — window reopen fix (2026-08-13)
+Published via `publish.sh` (notarized, stapled, Gatekeeper-accepted);
+hand-written notes + site changelog entry done. Sole user-facing change:
+the Window-scene fix below (App Review guideline 4). README needs no sync
+(no feature changes). Build 12 uploaded to ASC via `release.sh app-store`
+for the resubmission alongside the rights-cleared screenshots below.
+
 ## Rights-cleared App Store screenshots produced (2026-08-13)
 Answer to the 5.2.1 rejection: six art-directed 2560×1600 screenshots in
 `drafts/appstore/final/` (git-ignored), showing only original content — a
