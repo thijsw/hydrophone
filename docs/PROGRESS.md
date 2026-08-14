@@ -54,6 +54,21 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## App Review round 3: 2.1 Information Needed — response prepared (2026-08-14)
+Apple asked for a screen recording plus seven written items. Recording
+produced on-device (82s, `drafts/appstore/review-video/`): fresh launch →
+onboarding → server login → library browse → playback → Up Next panel →
+column browser → Favorites → menu-bar mini player → disconnect, all
+against the rights-cleared local library. Harness additions:
+`HYDROPHONE_SCREENSHOT_FRESH=1` (DEBUG) starts with an empty in-memory
+credential store for onboarding flows. Automation gotchas burned into the
+take script: raise the Settings *window* (AXRaise), not the process —
+process-frontmost lifts the full-screen main window over Settings and
+swallows clicks; SecureFields drop synthetic per-char keystrokes — paste
+(⌘V) instead; System Events `keystroke` needs ~1s flush before the next
+click. Written answers for all seven items:
+`drafts/appstore/review-notes.md` — ready to paste into ASC.
+
 ## Mac App Store: 0.6.2 resubmitted for review (2026-08-13)
 The rejected version record was edited to 0.6.2 with build 12 attached,
 the six rights-cleared screenshots replaced the old set (ASC quirk worth

@@ -176,6 +176,11 @@ final class AppModel {
     private static func makeCredentialStore() -> CredentialStore {
         #if DEBUG
         let env = ProcessInfo.processInfo.environment
+        // Fresh-start variant: empty in-memory store, so a demo recording can
+        // walk the real onboarding/connect flow against a throwaway server.
+        if env["HYDROPHONE_SCREENSHOT_FRESH"] == "1" {
+            return InMemoryCredentialStore()
+        }
         if let server = env["HYDROPHONE_SCREENSHOT_SERVER"],
            let url = URL(string: server),
            let user = env["HYDROPHONE_SCREENSHOT_USER"],
