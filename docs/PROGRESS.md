@@ -54,6 +54,18 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## App Review round 3: response sent (2026-08-14)
+All seven items posted as a reply in the submission thread with the
+82→76.5s screen recording attached (plus a public mirror at
+hydrophone.app/review/, now hosted in `site/review/`), and items 2–7
+stored in App Review Information → Notes with refreshed contact info.
+ASC quirks for next time: the reply dialog's Attach File shows NO
+feedback — attachments appear only after Save Draft (we accumulated five
+duplicates before noticing; hover a row for its remove button), and the
+recording's first frames needed re-cutting because killing the frontmost
+app pre-recording un-hides the next app. Review resumes from the reply;
+awaiting Apple.
+
 ## App Review round 3: 2.1 Information Needed — response prepared (2026-08-14)
 Apple asked for a screen recording plus seven written items. Recording
 produced on-device (82s, `drafts/appstore/review-video/`): fresh launch →
