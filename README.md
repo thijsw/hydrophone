@@ -60,8 +60,10 @@ keyboard-friendly, low-footprint, native — instead of a browser tab.
 
 Actively developed — see the
 [changelog](https://hydrophone.app/#changelog) for what's new.
-Mac App Store distribution is in progress. Deliberately out of scope for
-v1: offline downloads, smart playlists, multi-server profiles, tag editing.
+Also available on the
+[Mac App Store](https://apps.apple.com/app/id6795956982). Deliberately out
+of scope for v1: offline downloads, smart playlists, multi-server
+profiles, tag editing.
 
 ## For developers
 

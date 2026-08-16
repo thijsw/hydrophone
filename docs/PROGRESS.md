@@ -36,13 +36,11 @@ M7 ✅ (shortcuts, restoration incl. scroll offset, accessibility semantics
 AX-verified, Light/Dark verified — the `08` checklist passes; only the
 Liquid Glass look awaits a macOS 26 machine, plus by-hand VoiceOver/contrast
 spot checks) ·
-M8 🚧 (Developer ID pipeline complete incl. notarization + stapling —
-Gatekeeper-accepted distributable build; CI runs the unit suite on every
-push; final icon shipped 2026-07-29; MAS: 0.6.0/10 approved 2026-08-05 but
-superseded unreleased, 0.6.1/11 rejected 2026-08-12 (window reopen +
-screenshot artwork), 0.6.2/12 **resubmitted 2026-08-13** with the
-Window-scene fix and rights-cleared screenshots — remaining: pass review,
-release, then point the website + README at the store page)
+M8 ✅ (Developer ID pipeline: notarized, stapled, Gatekeeper-accepted
+builds via publish.sh; CI on every push; **Mac App Store: 0.6.2 approved
+and released 2026-08-16** after three review rounds — window-scene fix,
+rights-cleared screenshots, and the recorded evidence package did it;
+store page linked from website + README)
 
 ## How to build / test
 ```sh
@@ -53,6 +51,17 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 ```
 
 ---
+
+## Mac App Store: APPROVED & RELEASED — 0.6.2 (2026-08-16)
+Third submission passed App Review (window-scene fix + rights-cleared
+screenshots + the round-3 evidence package: on-device screen recording
+and the seven-item information reply). Version released manually from
+Pending Developer Release; listing live at
+<https://apps.apple.com/app/id6795956982>. Website hero and fact sheet
+now link the store page alongside the direct download; README's "in
+progress" note replaced with the store link. This closes M8. The review
+recording stays hosted at hydrophone.app/review/ while the review thread
+links to it; retire it in a future cleanup.
 
 ## App Review round 3: response sent (2026-08-14)
 All seven items posted as a reply in the submission thread with the
