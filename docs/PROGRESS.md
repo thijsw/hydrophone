@@ -52,6 +52,13 @@ xcodebuild -project Hydrophone.xcodeproj -scheme Hydrophone \
 
 ---
 
+## Navidrome client directory: submission opened (2026-08-16)
+PR navidrome/website#425 adds Hydrophone to the official client apps
+directory (assets/apps/hydrophone: schema-validated YAML + five WebP
+shots from the rights-cleared library). Eligibility note: their rule
+wants 15 stars for open-source apps; we lead with the Mac App Store
+listing instead. Awaiting maintainer review.
+
 ## Mac App Store: APPROVED & RELEASED — 0.6.2 (2026-08-16)
 Third submission passed App Review (window-scene fix + rights-cleared
 screenshots + the round-3 evidence package: on-device screen recording
